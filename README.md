@@ -13,7 +13,7 @@ Built as a native Android app in Java, with a Java backend and a MySQL database.
 | `app-android` | The Android application, written in Java |
 | `backend` | The Java backend and database. Not built yet |
 
-Video Tutorial On Setting Up GitHub Desktop
+## Video tutorial for GitHub Desktop
 
 [![Watch the video](https://img.youtube.com/vi/N6vPzWkPN_Y/hqdefault.jpg)](https://www.youtube.com/watch?v=N6vPzWkPN_Y)
 
