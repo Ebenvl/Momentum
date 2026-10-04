@@ -1,0 +1,9 @@
+# Build output, created every time the backend is built
+build/
+.gradle/
+bin/
+out/
+
+# Local settings with real passwords. NEVER commit this.
+# Copy config.example.properties to config.properties and fill in your own values.
+config.properties
