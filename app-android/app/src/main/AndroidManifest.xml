@@ -11,8 +11,15 @@
         android:roundIcon="@mipmap/ic_launcher_round"
         android:supportsRtl="true"
         android:theme="@style/Theme.Momentum">
+
         <activity
             android:name=".MainActivity"
+            android:exported="false" />
+
+        <!-- TEMPORARY placeholder screens. The app starts on LoginActivity
+             until the real frontend replaces them. -->
+        <activity
+            android:name=".placeholder.LoginActivity"
             android:exported="true">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
@@ -20,6 +27,13 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
+        <activity android:name=".placeholder.RegisterActivity" />
+        <activity android:name=".placeholder.HomeActivity" />
+        <activity android:name=".placeholder.CoursesActivity" />
+        <activity android:name=".placeholder.GoalsActivity" />
+        <activity android:name=".placeholder.LeaderboardActivity" />
+        <activity android:name=".placeholder.ProfileActivity" />
+        <activity android:name=".placeholder.AdminActivity" />
     </application>
 
 </manifest>

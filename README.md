@@ -11,7 +11,27 @@ Built as a native Android app in Java, with a Java backend and a MySQL database.
 | Folder | What it is |
 |---|---|
 | `app-android` | The Android application, written in Java |
-| `backend` | The Java backend and database. Not built yet |
+| `backend` | The Java backend and the MySQL database setup |
+
+## How the app code is organised
+
+The app currently runs on temporary screens, so we can work on the features before the real frontend is added.
+
+**Important: everything the app shows right now is fake.** Courses, points, streaks and the leaderboard are hardcoded. Accounts, goals and check-ins you add only exist until the app closes. Nothing is saved to the database yet. It looks finished, but almost none of the features actually work yet.
+
+| Folder in `app-android` | What it is |
+|---|---|
+| `placeholder` | Temporary screens. These get replaced by the real frontend |
+| `service` | The features. This is where most of our code goes, and it stays when the screens are replaced |
+| `data` | Talks to the backend. For now it uses fake sample data, so the app runs on the emulator without the backend |
+| `model` | Simple classes for users, courses, goals and so on |
+
+Keep your feature code in `service`, not inside the screens, so nothing is lost when the real frontend arrives. Look for the `TODO` comments to see what still needs to be done.
+
+Test accounts while the fake data is in use:
+
+- Learner: `thandi@test.com` / `password123`
+- Admin: `admin@test.com` / `admin123`
 
 ## Video tutorial for GitHub Desktop
 
