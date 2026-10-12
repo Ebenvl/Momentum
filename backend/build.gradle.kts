@@ -39,6 +39,10 @@ dependencies {
 
     // Hashes passwords so they are never stored as plain text.
     implementation("org.mindrot:jbcrypt:0.4")
+
+    // Creates and checks JWT login tokens, so the app can prove who is
+    // logged in without sending the password with every request.
+    implementation("com.auth0:java-jwt:4.5.2")
 }
 
 application {

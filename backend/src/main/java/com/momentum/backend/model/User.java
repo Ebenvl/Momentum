@@ -4,6 +4,7 @@ package com.momentum.backend.model;
 public class User {
 
     public int userId;
+    public Integer idst;    // LearnTech learner id, null means not linked yet
     public String email;
     public String passwordHash;
     public String fullName;
@@ -11,4 +12,3 @@ public class User {
     public String status;
 
 }
-

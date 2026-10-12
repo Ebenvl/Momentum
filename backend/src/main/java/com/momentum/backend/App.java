@@ -1,23 +1,32 @@
 package com.momentum.backend;
 
+import com.momentum.backend.admin.AdminController;
+import com.momentum.backend.auth.AuthController;
+import com.momentum.backend.auth.TokenService;
 import com.momentum.backend.config.Config;
+import com.momentum.backend.db.ActivityLogRepository;
+import com.momentum.backend.db.BadgeRepository;
+import com.momentum.backend.db.CheckInRepository;
+import com.momentum.backend.db.CourseRepository;
 import com.momentum.backend.db.Database;
+import com.momentum.backend.db.EnrolmentRepository;
+import com.momentum.backend.db.GoalRepository;
+import com.momentum.backend.db.PointsRepository;
+import com.momentum.backend.db.SnapshotRepository;
+import com.momentum.backend.db.StreakRepository;
 import com.momentum.backend.db.UserRepository;
-import com.momentum.backend.model.LoginRequest;
-import com.momentum.backend.model.RegisterRequest;
-import com.momentum.backend.model.User;
+import com.momentum.backend.goals.GoalController;
+import com.momentum.backend.profile.ProfileController;
 import io.javalin.Javalin;
-import org.mindrot.jbcrypt.BCrypt;
 
-import java.sql.SQLException;
 import java.util.Map;
 
 /**
  * Starting point of the LearnTech Momentum backend.
  *
  * Starts the web server, connects to the database, and sets up the
- * endpoints the Android app calls. More endpoints get added here as
- * each feature is built, for example register, login and goals.
+ * endpoints the Android app calls. Each endpoint points to a method in
+ * a controller class, for example AuthController for register and login.
  */
 public class App {
 
@@ -26,8 +35,26 @@ public class App {
         // the backend stops here with a clear message.
         Config config = new Config();
         Database database = new Database(config);
-        UserRepository userRepository = new UserRepository(database);
         int port = config.getInt("server.port");
+
+        // Repositories read and save data, one per table (or pair of tables).
+        UserRepository userRepository = new UserRepository(database);
+        CourseRepository courseRepository = new CourseRepository(database);
+        EnrolmentRepository enrolmentRepository = new EnrolmentRepository(database);
+        GoalRepository goalRepository = new GoalRepository(database);
+        CheckInRepository checkInRepository = new CheckInRepository(database);
+        BadgeRepository badgeRepository = new BadgeRepository(database);
+        PointsRepository pointsRepository = new PointsRepository(database);
+        StreakRepository streakRepository = new StreakRepository(database);
+        SnapshotRepository snapshotRepository = new SnapshotRepository(database);
+        ActivityLogRepository activityLogRepository = new ActivityLogRepository(database);
+
+        // Controllers handle requests from the app.
+        TokenService tokenService = new TokenService(config);
+        AuthController authController = new AuthController(userRepository, tokenService);
+        GoalController goalController = new GoalController(goalRepository, checkInRepository);
+        ProfileController profileController = new ProfileController(userRepository);
+        AdminController adminController = new AdminController(userRepository, courseRepository, badgeRepository);
 
         // In Javalin 7, the port and every route are set up inside this
         // block, before the server starts. The block's variable is called
@@ -57,120 +84,43 @@ public class App {
             });
 
             // -----------------------------------------------------
-            // Register
+            // Register and login (see auth/AuthController.java)
+            // Open to everyone, no token needed.
             // -----------------------------------------------------
-
-            javalinConfig.routes.post("/register", ctx -> {
-
-                // Read the details the app sent. If it isn't proper JSON, stop here.
-                RegisterRequest request;
-                try {
-                    request = ctx.bodyAsClass(RegisterRequest.class);
-                } catch (Exception e) {
-                    ctx.status(400).json(Map.of("error", "invalid request"));
-                    return;
-                }
-
-                // Check nothing was left empty.
-                if (request.email == null || request.email.isBlank()) {
-                    ctx.status(400).json(Map.of("error", "email is required"));
-                    return;
-                }
-                if (request.password == null || request.password.isBlank()) {
-                    ctx.status(400).json(Map.of("error", "password is required"));
-                    return;
-                }
-                if (request.fullName == null || request.fullName.isBlank()) {
-                    ctx.status(400).json(Map.of("error", "full name is required"));
-                    return;
-                }
-
-                // Basic format checks.
-                if (!request.email.contains("@")) {
-                    ctx.status(400).json(Map.of("error", "email is not valid"));
-                    return;
-                }
-                if (request.password.length() < 8) {
-                    ctx.status(400).json(Map.of("error", "password must be at least 8 characters"));
-                    return;
-                }
-
-                try {
-                    // Stop here if someone already registered with this email.
-                    if (userRepository.emailExists(request.email)) {
-                        ctx.status(409).json(Map.of("error", "email already registered"));
-                        return;
-                    }
-
-                    String passwordHash = BCrypt.hashpw(request.password, BCrypt.gensalt());
-                    boolean saved = userRepository.insertUser(request.email, passwordHash, request.fullName);
-                    if (saved) {
-                        ctx.json(Map.of("message", "registered"));
-                    } else {
-                        ctx.status(500).json(Map.of("error", "could not register"));
-                    }
-                } catch (SQLException e) {
-                    ctx.status(500).json(Map.of("error", "something went wrong, try again"));
-                }
-
-            });
+            javalinConfig.routes.post("/register", authController::register);
+            javalinConfig.routes.post("/login", authController::login);
 
             // -----------------------------------------------------
-            // Login
+            // Profile (see profile/ProfileController.java)
             // -----------------------------------------------------
+            javalinConfig.routes.get("/me", profileController::getMe);
+            javalinConfig.routes.put("/me", profileController::updateMe);
 
-            javalinConfig.routes.post("/login", ctx -> {
+            // -----------------------------------------------------
+            // Goals and check-ins (see goals/GoalController.java)
+            // -----------------------------------------------------
+            javalinConfig.routes.post("/goals", goalController::create);
+            javalinConfig.routes.get("/goals/{id}", goalController::getOne);
+            javalinConfig.routes.put("/goals/{id}", goalController::update);
+            javalinConfig.routes.put("/goals/{id}/status", goalController::updateStatus);
+            javalinConfig.routes.delete("/goals/{id}", goalController::delete);
+            javalinConfig.routes.post("/goals/{id}/checkins", goalController::checkIn);
 
-                // Read the details the app sent. If it isn't proper JSON, stop here.
-                LoginRequest request;
-                try {
-                    request = ctx.bodyAsClass(LoginRequest.class);
-                } catch (Exception e) {
-                    ctx.status(400).json(Map.of("error", "invalid request"));
-                    return;
-                }
+            // -----------------------------------------------------
+            // Admin (see admin/AdminController.java)
+            // -----------------------------------------------------
+            javalinConfig.routes.get("/admin/users/{id}", adminController::getUser);
+            javalinConfig.routes.put("/admin/users/{id}/status", adminController::setUserStatus);
+            javalinConfig.routes.put("/admin/users/{id}/link", adminController::linkUser);
+            javalinConfig.routes.delete("/admin/users/{id}", adminController::deleteUser);
 
-                // Check nothing was left empty.
-                if (request.email == null || request.email.isBlank()) {
-                    ctx.status(400).json(Map.of("error", "email is required"));
-                    return;
-                }
-                if (request.password == null || request.password.isBlank()) {
-                    ctx.status(400).json(Map.of("error", "password is required"));
-                    return;
-                }
+            javalinConfig.routes.get("/admin/courses/{id}", adminController::getCourse);
+            javalinConfig.routes.put("/admin/courses/{id}", adminController::updateCourse);
 
-                try {
-                    User user = userRepository.findUserByEmail(request.email);
-
-                    // Same message for a wrong email and a wrong password, so nobody
-                    // can use login to find out which emails are registered.
-                    if (user == null) {
-                        ctx.status(401).json(Map.of("error", "wrong email or password"));
-                        return;
-                    }
-
-                    if (!BCrypt.checkpw(request.password, user.passwordHash)) {
-                       ctx.status(401).json(Map.of("error", "wrong email or password"));
-                        return;
-                    }
-
-                    if (user.status.equals("suspended")) {
-                        ctx.status(403).json(Map.of("error", "this account is suspended"));
-                        return;
-                    }
-
-                    ctx.json(Map.of(
-                        "message", "logged in",
-                        "userId", user.userId,
-                        "fullName", user.fullName,
-                        "role", user.role));
-                } catch (SQLException e) {
-                    ctx.status(500).json(Map.of("error", "something went wrong, try again"));
-                }
-
-            });
-
+            javalinConfig.routes.post("/admin/badges", adminController::createBadge);
+            javalinConfig.routes.get("/admin/badges/{id}", adminController::getBadge);
+            javalinConfig.routes.put("/admin/badges/{id}", adminController::updateBadge);
+            javalinConfig.routes.delete("/admin/badges/{id}", adminController::deleteBadge);
         });
 
         // Close the server and the database connections cleanly
