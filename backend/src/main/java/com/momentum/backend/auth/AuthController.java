@@ -11,7 +11,6 @@ import java.sql.SQLException;
 import java.util.Map;
 
 // Handles register and login.
-// This is the Authentication Service from D3, section 6.2.
 // The routes in App.java point here.
 public class AuthController {
 
@@ -58,6 +57,12 @@ public class AuthController {
         }
         if (request.password.length() < 8) {
             ctx.status(400).json(Map.of("error", "password must be at least 8 characters"));
+            return;
+        }
+        // BCrypt only reads the first 72 characters, so anything
+        // longer would quietly be cut off. Better to say so.
+        if (request.password.length() > 72) {
+            ctx.status(400).json(Map.of("error", "password can be at most 72 characters"));
             return;
         }
 
@@ -124,7 +129,7 @@ public class AuthController {
                 return;
             }
 
-            // Records the login time (last_login_at in the Users table).
+            // Records the login time.
             userRepository.updateLastLogin(user.userId);
 
             String token = tokenService.createToken(user);

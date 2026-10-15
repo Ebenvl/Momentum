@@ -6,7 +6,7 @@ import java.sql.SQLException;
 
 // Saves progress snapshots in the ProgressSnapshots table.
 // The sync writes one per learner every time it runs, because LearnTech keeps
-// no history, so this table is the only history there is (API point 7, FR-21).
+// no history, so this table is the only history there is.
 public class SnapshotRepository {
 
     private final Database database;

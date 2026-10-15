@@ -17,7 +17,7 @@ public class BadgeRepository {
         this.database = database;
     }
 
-    // Admin: create a badge (FR-14).
+    // Admin: create a badge.
     public boolean insertBadge(BadgeRequest badge) throws SQLException {
 
         String sql = "INSERT INTO Badges (name, description, image_url, rule_type, rule_value, "
@@ -66,7 +66,7 @@ public class BadgeRepository {
         }
     }
 
-    // Admin: edit a badge (FR-14).
+    // Admin: edit a badge.
     public boolean updateBadge(int badgeId, BadgeRequest badge) throws SQLException {
 
         String sql = "UPDATE Badges SET name = ?, description = ?, image_url = ?, rule_type = ?, "

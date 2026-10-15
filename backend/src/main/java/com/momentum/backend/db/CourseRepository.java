@@ -57,10 +57,10 @@ public class CourseRepository {
     }
 
     // Used by the sync: adds the course if it is new, or updates its name if it
-    // is already there. Keyed on platform_course_id, never on the code (API point 3).
+    // is already there. Keyed on platform_course_id, never on the code.
     //
     // If LearnTech sends no duration (null), whatever is already saved is kept,
-    // so a duration the admin filled in by hand (FR-27) is not wiped out.
+    // so a duration the admin filled in by hand is not wiped out.
     // COALESCE means "use the first one that is not null".
     public boolean saveCourse(int platformCourseId, String courseName, Integer expectedMinutes) throws SQLException {
 
@@ -81,7 +81,7 @@ public class CourseRepository {
     }
 
     // Admin: override how many points a course is worth, or null to go back
-    // to the calculated value (FR-15).
+    // to the calculated value.
     public boolean updatePointsValue(int courseId, Integer pointsValue) throws SQLException {
 
         String sql = "UPDATE Courses SET points_value = ? WHERE course_id = ?";
@@ -95,7 +95,7 @@ public class CourseRepository {
         }
     }
 
-    // Admin: set the expected duration where LearnTech does not supply one (FR-27).
+    // Admin: set the expected duration where LearnTech does not supply one.
     public boolean updateExpectedMinutes(int courseId, Integer expectedMinutes) throws SQLException {
 
         String sql = "UPDATE Courses SET expected_minutes = ? WHERE course_id = ?";

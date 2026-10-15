@@ -1,6 +1,6 @@
 package com.momentum.backend.model;
 
-// Holds the details the app sends when a learner edits their profile (FR-12).
+// Holds the details the app sends when a learner edits their profile.
 public class ProfileRequest {
 
     public String fullName;

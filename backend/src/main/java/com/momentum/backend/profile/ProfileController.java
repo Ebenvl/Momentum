@@ -9,7 +9,7 @@ import io.javalin.http.Context;
 import java.sql.SQLException;
 import java.util.Map;
 
-// Handles the learner's own profile (FR-12).
+// Handles the learner's own profile.
 public class ProfileController {
 
     private final UserRepository userRepository;

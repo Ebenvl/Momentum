@@ -15,7 +15,7 @@ public class PointsRepository {
 
     // Records a points award. INSERT IGNORE skips it quietly if the same award
     // already exists (unique key on user_id + reference_id + reason), so a
-    // repeated sync can never award the same completion twice (FR-29).
+    // repeated sync can never award the same completion twice.
     // Gives back true only if the points are new.
     //
     // reason is for example "course_completed" or "badge_awarded", and

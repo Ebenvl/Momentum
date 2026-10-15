@@ -2,7 +2,7 @@ package com.momentum.backend.learntech;
 
 import java.util.List;
 
-// One learner, exactly as LearnTech's GET /learners sends it (API v1.0).
+// One learner, exactly as LearnTech's GET /learners sends it.
 // The field names match the API's names, written in Java style, so
 // "course_id" in the JSON becomes courseId here. LearnTechClient does that.
 public class ApiLearner {

@@ -17,10 +17,8 @@ import java.sql.SQLException;
 import java.util.List;
 import java.util.Map;
 
-// Handles the administrator's screens: users, courses and badges
-// (FR-13, FR-14, FR-15, FR-26, FR-27).
-// Every method first checks the
-// person is logged in AND is an administrator.
+// Handles the administrator's screens: users, courses and badges.
+// Every method first checks the person is logged in and is an administrator.
 public class AdminController {
 
     private final UserRepository userRepository;
@@ -39,7 +37,7 @@ public class AdminController {
     // =====================================================
 
     // -----------------------------------------------------
-    // PUT /admin/users/{id}/status   suspend or reactivate (FR-13)
+    // PUT /admin/users/{id}/status   suspend or reactivate
     // -----------------------------------------------------
     public void setUserStatus(Context ctx) {
 
@@ -84,7 +82,7 @@ public class AdminController {
     }
 
     // -----------------------------------------------------
-    // PUT /admin/users/{id}/link   link to a LearnTech learner (FR-26)
+    // PUT /admin/users/{id}/link   link to a LearnTech learner
     // Send {"idst": null} to unlink.
     // -----------------------------------------------------
     public void linkUser(Context ctx) {
@@ -124,7 +122,7 @@ public class AdminController {
     }
 
     // -----------------------------------------------------
-    // DELETE /admin/users/{id}   remove an account (FR-13)
+    // DELETE /admin/users/{id}   remove an account
     // -----------------------------------------------------
     public void deleteUser(Context ctx) {
 
@@ -213,7 +211,7 @@ public class AdminController {
 
     // -----------------------------------------------------
     // PUT /admin/courses/{id}
-    // Points override (FR-15) and expected duration (FR-27).
+    // Points override and expected duration.
     // Either can be null, which clears it.
     // -----------------------------------------------------
     public void updateCourse(Context ctx) {
@@ -258,7 +256,7 @@ public class AdminController {
     }
 
     // =====================================================
-    // Badges (FR-14)
+    // Badges
     // =====================================================
 
     // -----------------------------------------------------

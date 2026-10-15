@@ -1,6 +1,6 @@
 -- ============================================================
 -- LearnTech Momentum: database schema
--- Matches D3 Section 7 (Data Design), table for table.
+-- One table for each entity in the data design.
 -- Run this logged in as root in MySQL Workbench, after 01_setup.sql.
 --
 -- Safe to re-run: it drops the tables first, in the right order,
@@ -31,7 +31,7 @@ DROP TABLE IF EXISTS Users;
 -- Everyone who registers in the app, learners and administrators.
 -- idst links the account to a learner on the LearnTech platform.
 -- NULL idst means registered but not yet matched by email, which is
--- a normal state, not an error (API v1.0, point 8).
+-- a normal state, not an error.
 -- ------------------------------------------------------------
 CREATE TABLE Users (
     user_id              INT           NOT NULL AUTO_INCREMENT,
@@ -57,9 +57,9 @@ CREATE TABLE Users (
 -- Courses
 -- The course catalogue, synced from the LearnTech /courses endpoint.
 -- Always key on platform_course_id, never on the course code,
--- because codes are not unique on the platform (API v1.0, point 3).
+-- because codes are not unique on the platform.
 -- expected_minutes can be NULL when no duration is set on the
--- platform. It must never be treated as zero (API v1.0, point 4).
+-- platform. It must never be treated as zero.
 -- ------------------------------------------------------------
 CREATE TABLE Courses (
     course_id            INT           NOT NULL AUTO_INCREMENT,
@@ -78,7 +78,7 @@ CREATE TABLE Courses (
 -- Enrolments
 -- Which learner is on which course, and the state of it,
 -- as of the last sync. state has exactly three values, there is
--- no per-course percentage (Client brief section 5, API v1.0 point 1).
+-- no per-course percentage.
 -- ------------------------------------------------------------
 CREATE TABLE Enrolments (
     enrolment_id         INT           NOT NULL AUTO_INCREMENT,
@@ -102,7 +102,7 @@ CREATE TABLE Enrolments (
 -- ------------------------------------------------------------
 -- Goals
 -- Personal goals a learner sets. Free text goals carry no points,
--- because the app cannot check them on its own (Client brief section 6).
+-- because the app cannot check them on its own.
 -- ------------------------------------------------------------
 CREATE TABLE Goals (
     goal_id              INT           NOT NULL AUTO_INCREMENT,
@@ -145,9 +145,9 @@ CREATE TABLE CheckIns (
 -- ------------------------------------------------------------
 -- PointsTransactions
 -- Every points award is one row, written during sync, not on display.
--- month_key drives the monthly leaderboard (Client brief section 7).
+-- month_key drives the monthly leaderboard.
 -- The unique key stops a repeated sync from awarding the same
--- completion twice (API v1.0, "Award points when you sync").
+-- completion twice.
 -- ------------------------------------------------------------
 CREATE TABLE PointsTransactions (
     transaction_id       INT           NOT NULL AUTO_INCREMENT,
@@ -217,7 +217,7 @@ CREATE TABLE Streaks (
 -- ProgressSnapshots
 -- Written on every scheduled sync. The platform only holds the
 -- current position with no history, so this table is the only place
--- that history will ever exist (API v1.0, point 7).
+-- that history will ever exist.
 -- ------------------------------------------------------------
 CREATE TABLE ProgressSnapshots (
     snapshot_id          INT           NOT NULL AUTO_INCREMENT,
@@ -258,7 +258,7 @@ CREATE TABLE ActivityLogs (
 -- The LearnTech API details, entered by the administrator in the app.
 -- Only ever one row, config_id is always 1.
 -- The key and secret are stored encrypted, and only on the server,
--- never on the phone (Client brief section 9).
+-- never on the phone.
 -- ------------------------------------------------------------
 CREATE TABLE PlatformConfig (
     config_id            INT           NOT NULL DEFAULT 1,

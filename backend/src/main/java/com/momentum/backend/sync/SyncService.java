@@ -1,26 +1,39 @@
 package com.momentum.backend.sync;
 
 import com.momentum.backend.db.CourseRepository;
+import com.momentum.backend.db.EnrolmentRepository;
+import com.momentum.backend.db.SnapshotRepository;
+import com.momentum.backend.db.UserRepository;
 import com.momentum.backend.learntech.ApiCourse;
+import com.momentum.backend.learntech.ApiLearner;
 import com.momentum.backend.learntech.CoursesResponse;
 import com.momentum.backend.learntech.LearnTechClient;
 import com.momentum.backend.learntech.LearnTechException;
+import com.momentum.backend.learntech.LearnersResponse;
+import com.momentum.backend.model.User;
 
 import java.sql.SQLException;
 
 // Copies data from LearnTech into our own database.
-// This is the Sync Service from D3, section 6.2.
 //
 // The app never waits on LearnTech. The backend syncs on a schedule, and the
-// app only ever reads what is already in our database (NFR-17).
+// app only ever reads what is already in our database.
 public class SyncService {
 
     private final LearnTechClient learnTechClient;
     private final CourseRepository courseRepository;
+    private final UserRepository userRepository;
+    private final EnrolmentRepository enrolmentRepository;
+    private final SnapshotRepository snapshotRepository;
 
-    public SyncService(LearnTechClient learnTechClient, CourseRepository courseRepository) {
+    public SyncService(LearnTechClient learnTechClient, CourseRepository courseRepository,
+                       UserRepository userRepository, EnrolmentRepository enrolmentRepository,
+                       SnapshotRepository snapshotRepository) {
         this.learnTechClient = learnTechClient;
         this.courseRepository = courseRepository;
+        this.userRepository = userRepository;
+        this.enrolmentRepository = enrolmentRepository;
+        this.snapshotRepository = snapshotRepository;
     }
 
     // Saves LearnTech's whole course catalogue into the Courses table.
@@ -37,5 +50,45 @@ public class SyncService {
         }
 
         return saved;
+    }
+
+    // Goes through every learner on LearnTech. If one of our app users has the
+    // same email, they get linked.
+    // Learners who never registered in the app are skipped.
+    // Gives back how many learners were linked to an app account.
+    public int syncLearners() throws LearnTechException, SQLException {
+
+        LearnersResponse response = learnTechClient.getAllLearners();
+        int linked = 0;
+
+        for (ApiLearner learner : response.learners) {
+
+            User user = userRepository.findUserByEmail(learner.email);
+            if (user == null) {
+                continue;   // no app account with this email, skip to the next learner
+            }
+
+            // Link the account the first time we see a match.
+            if (user.idst == null) {
+                if (userRepository.idstTaken(learner.idst)) {
+                    continue;   // this learner is already linked to a different account
+                }
+                userRepository.updateIdst(user.userId, learner.idst);
+            }
+
+            // Records where the learner stands right now. LearnTech keeps no
+            // history, so this is the only history there will be.
+            // Points and streak are 0 until those parts are built.
+            snapshotRepository.insertSnapshot(user.userId,
+                    learner.summary.coursesEnrolled,
+                    learner.summary.coursesCompleted,
+                    learner.summary.totalTimeMinutes,
+                    0,
+                    0);
+
+            linked++;
+        }
+
+        return linked;
     }
 }

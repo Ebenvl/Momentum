@@ -55,12 +55,13 @@ public class App {
 
         // Talks to the LearnTech API (or the sample files, if base_url is "sample").
         LearnTechClient learnTechClient = new LearnTechClient(config);
-        SyncService syncService = new SyncService(learnTechClient, courseRepository);
+        SyncService syncService = new SyncService(learnTechClient, courseRepository,
+                userRepository, enrolmentRepository, snapshotRepository);
 
         // Controllers handle requests from the app.
         TokenService tokenService = new TokenService(config);
         AuthController authController = new AuthController(userRepository, tokenService);
-        GoalController goalController = new GoalController(goalRepository, checkInRepository);
+        GoalController goalController = new GoalController(goalRepository, checkInRepository, courseRepository);
         ProfileController profileController = new ProfileController(userRepository);
         AdminController adminController = new AdminController(userRepository, courseRepository, badgeRepository);
 
@@ -154,14 +155,27 @@ public class App {
         app.start();
         System.out.println("Momentum backend running on http://localhost:" + port);
 
-        // Sync the course catalogue from LearnTech once at startup.
-        // If LearnTech is down, the backend still runs, it just says so.
-        // TODO (mine): run the sync on a schedule as well (API doc, "How often to call this").
+        // Sync courses, then learners, from LearnTech once at startup.
+        // Courses go first, because enrolments need the courses to exist.
+        // If LearnTech is down, the backend still runs, and the error is logged.
         try {
             int courses = syncService.syncCourses();
             System.out.println("Synced " + courses + " courses from LearnTech");
+
+            int learners = syncService.syncLearners();
+            System.out.println("Synced " + learners + " learners linked to app accounts");
         } catch (Exception e) {
-            System.out.println("Course sync failed: " + e.getMessage());
+            System.out.println("Sync failed: " + e.getMessage());
+            try {
+                // The action column holds at most 100 characters, so long messages are cut short.
+                String action = "sync_failed: " + e.getMessage();
+                if (action.length() > 100) {
+                    action = action.substring(0, 100);
+                }
+                activityLogRepository.log(null, action, "error");
+            } catch (Exception logError) {
+                System.out.println("Could not write to the activity log either: " + logError.getMessage());
+            }
         }
     }
 }

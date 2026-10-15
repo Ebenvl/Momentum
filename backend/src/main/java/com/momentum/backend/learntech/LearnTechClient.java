@@ -15,9 +15,8 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.Duration;
 
-// Talks to the LearnTech API (API v1.0). Read only, it never changes anything
-// on the platform (FR-22). Only the backend uses this, the app never sees the
-// key (NFR-06, NFR-16).
+// Talks to the LearnTech API. Read only, it never changes anything
+// on the platform. Only the backend uses this, the app never sees the key.
 //
 // If learntech.base_url in config.properties is "sample", it reads the sample
 // replies from the API document in backend/sample-data instead, so the sync can
@@ -56,7 +55,7 @@ public class LearnTechClient {
     }
 
     // GET /learners?idst=...: one learner (for the sync when they log in).
-    // Still an array, with just one learner in it (API doc).
+    // Still an array, with just one learner in it.
     public LearnersResponse getLearner(int idst) throws LearnTechException {
         String body = fetch("/learners?idst=" + idst, "learners.json");
         return read(body, LearnersResponse.class);
@@ -99,7 +98,7 @@ public class LearnTechClient {
         }
 
         // 200 means OK. Anything else is an error, explained in the reply's
-        // "error" part (API doc, Errors): 401 wrong key, 404 not found, and so on.
+        // "error" part: 401 wrong key, 404 not found, and so on.
         if (response.statusCode() != 200) {
             throw new LearnTechException("LearnTech replied " + response.statusCode()
                     + ": " + errorMessage(response.body()));

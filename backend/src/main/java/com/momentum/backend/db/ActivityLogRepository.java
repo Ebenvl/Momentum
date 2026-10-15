@@ -4,7 +4,7 @@ import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.SQLException;
 
-// Saves entries in the ActivityLogs table (FR-17, NFR-10).
+// Saves entries in the ActivityLogs table.
 public class ActivityLogRepository {
 
     private final Database database;

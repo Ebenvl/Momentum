@@ -1,6 +1,6 @@
 package com.momentum.backend.model;
 
-// Holds the LearnTech learner id an admin links to a user (FR-26).
+// Holds the LearnTech learner id an admin links to a user.
 public class LinkRequest {
 
     public Integer idst;

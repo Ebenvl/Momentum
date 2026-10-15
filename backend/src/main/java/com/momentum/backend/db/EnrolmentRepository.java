@@ -15,7 +15,7 @@ public class EnrolmentRepository {
 
     // Used by the sync: adds the enrolment if it is new, or updates it with the
     // latest state from LearnTech if it is already there.
-    // Any of the Integer, Double and String values can be null (API point 6).
+    // Any of the Integer, Double and String values can be null.
     public boolean saveEnrolment(int userId, int courseId, String state, int timeSpentMinutes,
                                  String assessmentStatus, Double score, Double scoreMax,
                                  String firstAccess, String completedOn) throws SQLException {

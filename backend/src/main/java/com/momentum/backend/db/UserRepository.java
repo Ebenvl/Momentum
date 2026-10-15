@@ -77,6 +77,7 @@ public class UserRepository {
         }
     }
 
+
     // Finds a user by id. Gives back null if there is no such user.
     public User findUserById(int userId) throws SQLException {
 
@@ -135,7 +136,7 @@ public class UserRepository {
         }
     }
 
-    // Admin: suspend or reactivate an account (FR-13).
+    // Admin: suspend or reactivate an account.
     public boolean updateStatus(int userId, String status) throws SQLException {
 
         String sql = "UPDATE Users SET status = ? WHERE user_id = ?";
@@ -150,7 +151,7 @@ public class UserRepository {
     }
 
     // Links an account to a LearnTech learner, or unlinks it if idst is null.
-    // Used by the sync (FR-24) and by the admin (FR-26).
+    // Used by the sync and by the admin.
     public boolean updateIdst(int userId, Integer idst) throws SQLException {
 
         String sql = "UPDATE Users SET idst = ? WHERE user_id = ?";
@@ -165,7 +166,7 @@ public class UserRepository {
         }
     }
 
-    // Learner: change their name and reminder settings (FR-12).
+    // Learner: change their name and reminder settings.
     public boolean updateProfile(int userId, String fullName, boolean reminderEnabled,
                                  String reminderTime, int reminderDaysBefore) throws SQLException {
 
@@ -184,7 +185,7 @@ public class UserRepository {
         }
     }
 
-    // Admin: remove an account (FR-13). Their goals, check-ins, points and so on
+    // Admin: remove an account. Their goals, check-ins, points and so on
     // are removed with it, because of ON DELETE CASCADE in the schema.
     public boolean deleteUser(int userId) throws SQLException {
 

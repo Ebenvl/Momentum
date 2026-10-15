@@ -1,6 +1,6 @@
 package com.momentum.backend.model;
 
-// Holds the details an admin sends when creating or editing a badge (FR-14).
+// Holds the details an admin sends when creating or editing a badge.
 public class BadgeRequest {
 
     public String name;

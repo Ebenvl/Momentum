@@ -2,6 +2,7 @@ package com.momentum.backend.goals;
 
 import com.momentum.backend.auth.CurrentUser;
 import com.momentum.backend.db.CheckInRepository;
+import com.momentum.backend.db.CourseRepository;
 import com.momentum.backend.db.GoalRepository;
 import com.momentum.backend.model.CheckInRequest;
 import com.momentum.backend.model.Goal;
@@ -13,20 +14,22 @@ import java.sql.SQLException;
 import java.util.List;
 import java.util.Map;
 
-// Handles goals and check-ins (FR-03, FR-04).
-// This is the Goal Service from D3, section 6.2.
+// Handles goals and check-ins.
 public class GoalController {
 
-    // The five goal types from the schema and the client brief.
+    // The five goal types the Goals table allows.
     private static final List<String> GOAL_TYPES = List.of(
         "complete_n_courses", "complete_specific_course", "spend_minutes", "active_days", "free_text");
 
     private final GoalRepository goalRepository;
     private final CheckInRepository checkInRepository;
+    private final CourseRepository courseRepository;
 
-    public GoalController(GoalRepository goalRepository, CheckInRepository checkInRepository) {
+    public GoalController(GoalRepository goalRepository, CheckInRepository checkInRepository,
+                          CourseRepository courseRepository) {
         this.goalRepository = goalRepository;
         this.checkInRepository = checkInRepository;
+        this.courseRepository = courseRepository;
     }
 
     // -----------------------------------------------------
@@ -55,7 +58,14 @@ public class GoalController {
         }
 
         try {
-            // Free text goals carry no points, the app can't check them (client brief section 6).
+            // Free text goals carry no points, the app can't check them.
+            // The course picked for the goal has to exist in our catalogue.
+            if (request.targetCourseId != null
+                    && courseRepository.findCourseById(request.targetCourseId) == null) {
+                ctx.status(400).json(Map.of("error", "that course doesn't exist"));
+                return;
+            }
+
             boolean pointsEligible = !request.goalType.equals("free_text");
 
             boolean saved = goalRepository.insertGoal(userId, request, pointsEligible);
@@ -128,6 +138,13 @@ public class GoalController {
         }
 
         try {
+            // The course picked for the goal has to exist in our catalogue.
+            if (request.targetCourseId != null
+                    && courseRepository.findCourseById(request.targetCourseId) == null) {
+                ctx.status(400).json(Map.of("error", "that course doesn't exist"));
+                return;
+            }
+
             boolean pointsEligible = !request.goalType.equals("free_text");
 
             boolean saved = goalRepository.updateGoal(goalId, userId, request, pointsEligible);
