@@ -16,7 +16,11 @@ import com.momentum.backend.db.SnapshotRepository;
 import com.momentum.backend.db.StreakRepository;
 import com.momentum.backend.db.UserRepository;
 import com.momentum.backend.goals.GoalController;
+import com.momentum.backend.learntech.CoursesResponse;
+import com.momentum.backend.learntech.LearnTechClient;
+import com.momentum.backend.learntech.LearnTechException;
 import com.momentum.backend.profile.ProfileController;
+import com.momentum.backend.sync.SyncService;
 import io.javalin.Javalin;
 
 import java.util.Map;
@@ -49,6 +53,10 @@ public class App {
         SnapshotRepository snapshotRepository = new SnapshotRepository(database);
         ActivityLogRepository activityLogRepository = new ActivityLogRepository(database);
 
+        // Talks to the LearnTech API (or the sample files, if base_url is "sample").
+        LearnTechClient learnTechClient = new LearnTechClient(config);
+        SyncService syncService = new SyncService(learnTechClient, courseRepository);
+
         // Controllers handle requests from the app.
         TokenService tokenService = new TokenService(config);
         AuthController authController = new AuthController(userRepository, tokenService);
@@ -80,6 +88,19 @@ public class App {
                     ctx.status(503).json(Map.of(
                         "database", "unreachable",
                         "hint", "Check MySQL is running and the password in config.properties is right"));
+                }
+            });
+
+            // Can the backend reach the LearnTech API?
+            // Only says if it worked and how many courses there are, no other data.
+            javalinConfig.routes.get("/health/learntech", ctx -> {
+                try {
+                    CoursesResponse courses = learnTechClient.getCourses();
+                    ctx.json(Map.of("learntech", "ok", "courses", courses.count));
+                } catch (LearnTechException e) {
+                    ctx.status(503).json(Map.of(
+                        "learntech", "unreachable",
+                        "reason", e.getMessage()));
                 }
             });
 
@@ -132,5 +153,15 @@ public class App {
 
         app.start();
         System.out.println("Momentum backend running on http://localhost:" + port);
+
+        // Sync the course catalogue from LearnTech once at startup.
+        // If LearnTech is down, the backend still runs, it just says so.
+        // TODO (mine): run the sync on a schedule as well (API doc, "How often to call this").
+        try {
+            int courses = syncService.syncCourses();
+            System.out.println("Synced " + courses + " courses from LearnTech");
+        } catch (Exception e) {
+            System.out.println("Course sync failed: " + e.getMessage());
+        }
     }
 }

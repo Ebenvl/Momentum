@@ -1,0 +1,13 @@
+{
+  "success": true,
+  "generated_at": "2026-09-08T14:32:10+02:00",
+  "count": 6,
+  "courses": [
+    { "course_id": 17, "code": "AM", "course_name": "Anger Management", "category": "/root/Development Off the Shelf", "expected_minutes": 10, "has_assessment": false },
+    { "course_id": 2, "code": "DCC", "course_name": "Delivering Constructive Criticism", "category": "/root/Leadership Off the Shelf", "expected_minutes": 45, "has_assessment": true },
+    { "course_id": 6, "code": "LI", "course_name": "Leadership And Influence", "category": "/root/Leadership Off the Shelf", "expected_minutes": 60, "has_assessment": false },
+    { "course_id": 20, "code": "PS", "course_name": "Public Speaking", "category": "/root/Development Off the Shelf", "expected_minutes": 60, "has_assessment": false },
+    { "course_id": 34, "code": "MSEB", "course_name": "MS Office 2016 Excel Beginner", "category": "/root/MS Office 2016 Off the Shelf", "expected_minutes": 90, "has_assessment": false },
+    { "course_id": 88, "code": "001", "course_name": "MCQ Assessment 1", "category": "/root/Assessments", "expected_minutes": 20, "has_assessment": true }
+  ]
+}

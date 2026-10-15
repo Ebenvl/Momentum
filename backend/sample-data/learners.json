@@ -1,0 +1,83 @@
+{
+  "success": true,
+  "generated_at": "2026-09-08T14:32:10+02:00",
+  "count": 2,
+  "learners": [
+    {
+      "idst": 11836,
+      "username": "thandi.mokoena",
+      "firstname": "Thandi",
+      "lastname": "Mokoena",
+      "email": "thandi.mokoena@example-sandbox.co.za",
+      "summary": {
+        "courses_enrolled": 4,
+        "courses_completed": 2,
+        "percent_complete": 50,
+        "total_time_minutes": 132,
+        "last_activity": "2026-09-07T19:14:00+02:00"
+      },
+      "courses": [
+        {
+          "course_id": 17, "code": "AM", "course_name": "Anger Management",
+          "category": "/root/Development Off the Shelf", "state": "completed",
+          "expected_minutes": 10, "time_spent_minutes": 12, "assessment": null,
+          "date_enrolled": "2026-08-30", "first_access": "2026-09-01",
+          "date_completed": "2026-09-01", "last_activity": "2026-09-01T09:41:00+02:00"
+        },
+        {
+          "course_id": 2, "code": "DCC", "course_name": "Delivering Constructive Criticism",
+          "category": "/root/Leadership Off the Shelf", "state": "completed",
+          "expected_minutes": 45, "time_spent_minutes": 51,
+          "assessment": { "status": "passed", "score": 8, "score_max": 10 },
+          "date_enrolled": "2026-08-30", "first_access": "2026-09-02",
+          "date_completed": "2026-09-04", "last_activity": "2026-09-04T16:12:00+02:00"
+        },
+        {
+          "course_id": 88, "code": "001", "course_name": "MCQ Assessment 1",
+          "category": "/root/Assessments", "state": "in_progress",
+          "expected_minutes": 20, "time_spent_minutes": 9,
+          "assessment": { "status": "failed", "score": 4, "score_max": 10 },
+          "date_enrolled": "2026-08-30", "first_access": "2026-09-07",
+          "date_completed": null, "last_activity": "2026-09-07T19:14:00+02:00"
+        },
+        {
+          "course_id": 6, "code": "LI", "course_name": "Leadership And Influence",
+          "category": "/root/Leadership Off the Shelf", "state": "not_started",
+          "expected_minutes": 60, "time_spent_minutes": 0, "assessment": null,
+          "date_enrolled": "2026-08-30", "first_access": null,
+          "date_completed": null, "last_activity": null
+        }
+      ]
+    },
+    {
+      "idst": 11840,
+      "username": "sipho.dlamini",
+      "firstname": "Sipho",
+      "lastname": "Dlamini",
+      "email": "sipho.dlamini@example-sandbox.co.za",
+      "summary": {
+        "courses_enrolled": 2,
+        "courses_completed": 1,
+        "percent_complete": 50,
+        "total_time_minutes": 96,
+        "last_activity": "2026-09-08T07:55:00+02:00"
+      },
+      "courses": [
+        {
+          "course_id": 34, "code": "MSEB", "course_name": "MS Office 2016 Excel Beginner",
+          "category": "/root/MS Office 2016 Off the Shelf", "state": "in_progress",
+          "expected_minutes": 90, "time_spent_minutes": 74, "assessment": null,
+          "date_enrolled": "2026-08-30", "first_access": "2026-09-03",
+          "date_completed": null, "last_activity": "2026-09-08T07:55:00+02:00"
+        },
+        {
+          "course_id": 20, "code": "PS", "course_name": "Public Speaking",
+          "category": "/root/Development Off the Shelf", "state": "completed",
+          "expected_minutes": 60, "time_spent_minutes": 22, "assessment": null,
+          "date_enrolled": "2026-08-30", "first_access": "2026-09-01",
+          "date_completed": "2026-09-02", "last_activity": "2026-09-02T13:40:00+02:00"
+        }
+      ]
+    }
+  ]
+}
