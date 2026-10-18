@@ -5,11 +5,13 @@ import com.momentum.backend.db.EnrolmentRepository;
 import com.momentum.backend.db.SnapshotRepository;
 import com.momentum.backend.db.UserRepository;
 import com.momentum.backend.learntech.ApiCourse;
+import com.momentum.backend.learntech.ApiEnrolment;
 import com.momentum.backend.learntech.ApiLearner;
 import com.momentum.backend.learntech.CoursesResponse;
 import com.momentum.backend.learntech.LearnTechClient;
 import com.momentum.backend.learntech.LearnTechException;
 import com.momentum.backend.learntech.LearnersResponse;
+import com.momentum.backend.model.Course;
 import com.momentum.backend.model.User;
 
 import java.sql.SQLException;
@@ -53,7 +55,7 @@ public class SyncService {
     }
 
     // Goes through every learner on LearnTech. If one of our app users has the
-    // same email, they get linked.
+    // same email, they get linked and their courses are saved.
     // Learners who never registered in the app are skipped.
     // Gives back how many learners were linked to an app account.
     public int syncLearners() throws LearnTechException, SQLException {
@@ -74,6 +76,30 @@ public class SyncService {
                     continue;   // this learner is already linked to a different account
                 }
                 userRepository.updateIdst(user.userId, learner.idst);
+            }
+
+            for (ApiEnrolment enrolment : learner.courses) {
+
+                // Our own id for this course. If the course isn't in our catalogue yet, add it first.
+                Course course = courseRepository.findCourseByPlatformId(enrolment.courseId);
+                if (course == null) {
+                    courseRepository.saveCourse(enrolment.courseId, enrolment.courseName, enrolment.expectedMinutes);
+                    course = courseRepository.findCourseByPlatformId(enrolment.courseId);
+                }
+
+                // The assessment can be null, so only read inside it if it's there.
+                String assessmentStatus = null;
+                Double score = null;
+                Double scoreMax = null;
+                if (enrolment.assessment != null) {
+                    assessmentStatus = enrolment.assessment.status;
+                    score = enrolment.assessment.score;
+                    scoreMax = enrolment.assessment.scoreMax;
+                }
+
+                enrolmentRepository.saveEnrolment(user.userId, course.courseId, enrolment.state,
+                        enrolment.timeSpentMinutes, assessmentStatus, score, scoreMax,
+                        enrolment.firstAccess, enrolment.dateCompleted);
             }
 
             // Records where the learner stands right now. LearnTech keeps no

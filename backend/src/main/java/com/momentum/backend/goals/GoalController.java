@@ -80,6 +80,24 @@ public class GoalController {
     }
 
     // -----------------------------------------------------
+    // GET /goals   all of the learner's goals, newest first
+    // -----------------------------------------------------
+    public void getAll(Context ctx) {
+
+        Integer userId = CurrentUser.id(ctx);
+        if (userId == null) {
+            ctx.status(401).json(Map.of("error", "please log in"));
+            return;
+        }
+
+        try {
+            ctx.json(goalRepository.findGoalsForUser(userId));
+        } catch (SQLException e) {
+            ctx.status(500).json(Map.of("error", "something went wrong, try again"));
+        }
+    }
+
+    // -----------------------------------------------------
     // GET /goals/{id}
     // -----------------------------------------------------
     public void getOne(Context ctx) {
@@ -283,6 +301,33 @@ public class GoalController {
             } else {
                 ctx.status(500).json(Map.of("error", "could not log check-in"));
             }
+        } catch (SQLException e) {
+            ctx.status(500).json(Map.of("error", "something went wrong, try again"));
+        }
+    }
+
+    // -----------------------------------------------------
+    // GET /goals/{id}/checkins   the check-ins on one goal, newest first
+    // -----------------------------------------------------
+    public void getCheckIns(Context ctx) {
+
+        Integer userId = CurrentUser.id(ctx);
+        if (userId == null) {
+            ctx.status(401).json(Map.of("error", "please log in"));
+            return;
+        }
+
+        Integer goalId = readId(ctx);
+        if (goalId == null) {
+            return;
+        }
+
+        try {
+            if (goalRepository.findGoal(goalId, userId) == null) {
+                ctx.status(404).json(Map.of("error", "goal not found"));
+                return;
+            }
+            ctx.json(checkInRepository.findCheckInsForGoal(goalId, userId));
         } catch (SQLException e) {
             ctx.status(500).json(Map.of("error", "something went wrong, try again"));
         }

@@ -7,6 +7,8 @@ import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.util.ArrayList;
+import java.util.List;
 
 // Reads and saves goals in the Goals table.
 //
@@ -126,6 +128,41 @@ public class GoalRepository {
             statement.setInt(2, userId);
             return statement.executeUpdate() == 1;
         }
+    }
+
+    public List<Goal> findGoalsForUser(int userId) throws SQLException {
+
+        String sql = "SELECT goal_id, user_id, title, goal_type, target_value, target_course_id, "
+                + "target_date, status, points_eligible, created_at, completed_at "
+                + "FROM Goals WHERE user_id = ? ORDER BY created_at DESC";
+
+        List<Goal> goals = new ArrayList<>();
+
+        try (Connection connection = database.getConnection();
+             PreparedStatement statement = connection.prepareStatement(sql)) {
+
+            statement.setInt(1, userId);
+
+            try (ResultSet results = statement.executeQuery()) {
+                while (results.next()) {
+                    Goal goal = new Goal();
+                    goal.goalId = results.getInt("goal_id");
+                    goal.userId = results.getInt("user_id");
+                    goal.title = results.getString("title");
+                    goal.goalType = results.getString("goal_type");
+                    goal.targetValue = results.getObject("target_value", Integer.class);
+                    goal.targetCourseId = results.getObject("target_course_id", Integer.class);
+                    goal.targetDate = results.getString("target_date");
+                    goal.status = results.getString("status");
+                    goal.pointsEligible = results.getBoolean("points_eligible");
+                    goal.createdAt = results.getString("created_at");
+                    goal.completedAt = results.getString("completed_at");
+                    goals.add(goal);
+                }
+            }
+        }
+
+        return goals;
     }
 
 }

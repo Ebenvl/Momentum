@@ -1,6 +1,7 @@
 package com.momentum.backend.profile;
 
 import com.momentum.backend.auth.CurrentUser;
+import com.momentum.backend.db.SnapshotRepository;
 import com.momentum.backend.db.UserRepository;
 import com.momentum.backend.model.ProfileRequest;
 import com.momentum.backend.model.User;
@@ -13,9 +14,11 @@ import java.util.Map;
 public class ProfileController {
 
     private final UserRepository userRepository;
+    private final SnapshotRepository snapshotRepository;
 
-    public ProfileController(UserRepository userRepository) {
+    public ProfileController(UserRepository userRepository, SnapshotRepository snapshotRepository) {
         this.userRepository = userRepository;
+        this.snapshotRepository = snapshotRepository;
     }
 
     // -----------------------------------------------------
@@ -84,6 +87,24 @@ public class ProfileController {
             } else {
                 ctx.status(404).json(Map.of("error", "account not found"));
             }
+        } catch (SQLException e) {
+            ctx.status(500).json(Map.of("error", "something went wrong, try again"));
+        }
+    }
+
+    // -----------------------------------------------------
+    // GET /me/progress   the learner's progress over time, for the charts
+    // -----------------------------------------------------
+    public void getProgress(Context ctx) {
+
+        Integer userId = CurrentUser.id(ctx);
+        if (userId == null) {
+            ctx.status(401).json(Map.of("error", "please log in"));
+            return;
+        }
+
+        try {
+            ctx.json(snapshotRepository.findSnapshotsForUser(userId));
         } catch (SQLException e) {
             ctx.status(500).json(Map.of("error", "something went wrong, try again"));
         }

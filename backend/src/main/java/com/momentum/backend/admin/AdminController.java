@@ -1,6 +1,7 @@
 package com.momentum.backend.admin;
 
 import com.momentum.backend.auth.CurrentUser;
+import com.momentum.backend.db.ActivityLogRepository;
 import com.momentum.backend.db.BadgeRepository;
 import com.momentum.backend.db.CourseRepository;
 import com.momentum.backend.db.UserRepository;
@@ -24,12 +25,14 @@ public class AdminController {
     private final UserRepository userRepository;
     private final CourseRepository courseRepository;
     private final BadgeRepository badgeRepository;
+    private final ActivityLogRepository activityLogRepository;
 
     public AdminController(UserRepository userRepository, CourseRepository courseRepository,
-                           BadgeRepository badgeRepository) {
+                           BadgeRepository badgeRepository, ActivityLogRepository activityLogRepository) {
         this.userRepository = userRepository;
         this.courseRepository = courseRepository;
         this.badgeRepository = badgeRepository;
+        this.activityLogRepository = activityLogRepository;
     }
 
     // =====================================================
@@ -153,6 +156,22 @@ public class AdminController {
     }
 
     // -----------------------------------------------------
+    // GET /admin/users   every account
+    // -----------------------------------------------------
+    public void getUsers(Context ctx) {
+
+        if (!requireAdmin(ctx)) {
+            return;
+        }
+
+        try {
+            ctx.json(userRepository.findAllUsers());
+        } catch (SQLException e) {
+            ctx.status(500).json(Map.of("error", "something went wrong, try again"));
+        }
+    }
+
+    // -----------------------------------------------------
     // GET /admin/users/{id}
     // -----------------------------------------------------
     public void getUser(Context ctx) {
@@ -182,6 +201,22 @@ public class AdminController {
     // =====================================================
     // Courses
     // =====================================================
+
+    // -----------------------------------------------------
+    // GET /admin/courses   the whole course catalogue
+    // -----------------------------------------------------
+    public void getCourses(Context ctx) {
+
+        if (!requireAdmin(ctx)) {
+            return;
+        }
+
+        try {
+            ctx.json(courseRepository.findAllCourses());
+        } catch (SQLException e) {
+            ctx.status(500).json(Map.of("error", "something went wrong, try again"));
+        }
+    }
 
     // -----------------------------------------------------
     // GET /admin/courses/{id}
@@ -289,6 +324,38 @@ public class AdminController {
             } else {
                 ctx.status(500).json(Map.of("error", "could not create badge"));
             }
+        } catch (SQLException e) {
+            ctx.status(500).json(Map.of("error", "something went wrong, try again"));
+        }
+    }
+
+    // -----------------------------------------------------
+    // GET /admin/badges   every badge
+    // -----------------------------------------------------
+    public void getBadges(Context ctx) {
+
+        if (!requireAdmin(ctx)) {
+            return;
+        }
+
+        try {
+            ctx.json(badgeRepository.findAllBadges());
+        } catch (SQLException e) {
+            ctx.status(500).json(Map.of("error", "something went wrong, try again"));
+        }
+    }
+
+    // -----------------------------------------------------
+    // GET /admin/logs   the latest activity and errors
+    // -----------------------------------------------------
+    public void getLogs(Context ctx) {
+
+        if (!requireAdmin(ctx)) {
+            return;
+        }
+
+        try {
+            ctx.json(activityLogRepository.findRecentLogs());
         } catch (SQLException e) {
             ctx.status(500).json(Map.of("error", "something went wrong, try again"));
         }

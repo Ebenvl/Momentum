@@ -6,6 +6,8 @@ import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.util.ArrayList;
+import java.util.List;
 
 // Reads and saves courses in the Courses table.
 public class CourseRepository {
@@ -121,4 +123,24 @@ public class CourseRepository {
         return course;
     }
 
+
+    // The whole course catalogue, sorted by name.
+    public List<Course> findAllCourses() throws SQLException {
+
+        String sql = "SELECT course_id, platform_course_id, course_name, expected_minutes, points_value "
+                   + "FROM Courses ORDER BY course_name";
+
+        List<Course> courses = new ArrayList<>();
+
+        try (Connection connection = database.getConnection();
+             PreparedStatement statement = connection.prepareStatement(sql);
+             ResultSet results = statement.executeQuery()) {
+
+            while (results.next()) {
+                courses.add(readCourse(results));
+            }
+        }
+
+        return courses;
+    }
 }

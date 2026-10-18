@@ -91,7 +91,9 @@ public class LearnTechClient {
         try {
             response = http.send(request, HttpResponse.BodyHandlers.ofString());
         } catch (IOException e) {
-            throw new LearnTechException("could not reach LearnTech: " + e.getMessage());
+            // Some network errors have no message, so the error's type is used instead.
+            String reason = e.getMessage() != null ? e.getMessage() : e.getClass().getSimpleName();
+            throw new LearnTechException("could not reach LearnTech: " + reason);
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
             throw new LearnTechException("request to LearnTech was interrupted");

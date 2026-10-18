@@ -6,6 +6,8 @@ import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.util.ArrayList;
+import java.util.List;
 
 // Reads and saves users in the Users table.
 public class UserRepository {
@@ -199,4 +201,30 @@ public class UserRepository {
         }
     }
 
+
+    // Everyone with an account, for the admin's user list. The password hash is left out.
+    public List<User> findAllUsers() throws SQLException {
+
+        String sql = "SELECT user_id, idst, email, full_name, role, status FROM Users ORDER BY full_name";
+
+        List<User> users = new ArrayList<>();
+
+        try (Connection connection = database.getConnection();
+             PreparedStatement statement = connection.prepareStatement(sql);
+             ResultSet results = statement.executeQuery()) {
+
+            while (results.next()) {
+                User user = new User();
+                user.userId = results.getInt("user_id");
+                user.idst = results.getObject("idst", Integer.class);
+                user.email = results.getString("email");
+                user.fullName = results.getString("full_name");
+                user.role = results.getString("role");
+                user.status = results.getString("status");
+                users.add(user);
+            }
+        }
+
+        return users;
+    }
 }

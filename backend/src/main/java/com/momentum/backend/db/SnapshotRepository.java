@@ -1,8 +1,13 @@
 package com.momentum.backend.db;
 
+import com.momentum.backend.model.ProgressSnapshot;
+
 import java.sql.Connection;
 import java.sql.PreparedStatement;
+import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.util.ArrayList;
+import java.util.List;
 
 // Saves progress snapshots in the ProgressSnapshots table.
 // The sync writes one per learner every time it runs, because LearnTech keeps
@@ -34,4 +39,37 @@ public class SnapshotRepository {
         }
     }
 
+
+    // A learner's snapshots, oldest first, for the progress charts.
+    public List<ProgressSnapshot> findSnapshotsForUser(int userId) throws SQLException {
+
+        String sql = "SELECT snapshot_id, user_id, snapshot_at, courses_enrolled, courses_completed, "
+                   + "total_minutes, total_points, current_streak "
+                   + "FROM ProgressSnapshots WHERE user_id = ? ORDER BY snapshot_at";
+
+        List<ProgressSnapshot> snapshots = new ArrayList<>();
+
+        try (Connection connection = database.getConnection();
+             PreparedStatement statement = connection.prepareStatement(sql)) {
+
+            statement.setInt(1, userId);
+
+            try (ResultSet results = statement.executeQuery()) {
+                while (results.next()) {
+                    ProgressSnapshot snapshot = new ProgressSnapshot();
+                    snapshot.snapshotId = results.getInt("snapshot_id");
+                    snapshot.userId = results.getInt("user_id");
+                    snapshot.snapshotAt = results.getString("snapshot_at");
+                    snapshot.coursesEnrolled = results.getInt("courses_enrolled");
+                    snapshot.coursesCompleted = results.getInt("courses_completed");
+                    snapshot.totalMinutes = results.getInt("total_minutes");
+                    snapshot.totalPoints = results.getInt("total_points");
+                    snapshot.currentStreak = results.getInt("current_streak");
+                    snapshots.add(snapshot);
+                }
+            }
+        }
+
+        return snapshots;
+    }
 }
