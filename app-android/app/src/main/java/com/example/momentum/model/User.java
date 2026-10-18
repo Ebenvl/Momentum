@@ -8,6 +8,8 @@ public class User {
     public String fullName;
     public String role;         // "learner" or "administrator"
     public String status;       // "active" or "suspended"
+    public String lastLoginAt;  // only in the admin's user list, null if never
+    public Integer courseCount; // only in the admin's user list
 
     public User(int id, Integer idst, String email, String fullName, String role, String status) {
         this.id = id;

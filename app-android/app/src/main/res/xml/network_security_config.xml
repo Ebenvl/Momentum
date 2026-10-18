@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Android blocks plain http by default. This allows it only for the laptop
+     while testing (localhost through USB, or 10.0.2.2 on the emulator).
+     The hosted backend will use https, so it doesn't need anything here. -->
+<network-security-config>
+    <domain-config cleartextTrafficPermitted="true">
+        <domain includeSubdomains="false">localhost</domain>
+        <domain includeSubdomains="false">10.0.2.2</domain>
+    </domain-config>
+</network-security-config>

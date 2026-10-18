@@ -2,4 +2,16 @@
 <resources>
     <color name="black">#FF000000</color>
     <color name="white">#FFFFFFFF</color>
+
+    <!-- Colours used by the extra screens (achievements, timetable and so on).
+         Same values as the main screens: navy, purple, teal and pale grey. -->
+    <color name="ltm_navy">#071D35</color>
+    <color name="ltm_blue">#7666E8</color>
+    <color name="ltm_blue_light">#EDEAFF</color>
+    <color name="ltm_background">#F4F6FA</color>
+    <color name="ltm_green">#35B8A5</color>
+    <color name="ltm_white">#FFFFFF</color>
+    <color name="ltm_text">#071D35</color>
+    <color name="ltm_muted">#687783</color>
+    <color name="ltm_border">#E1E6F0</color>
 </resources>

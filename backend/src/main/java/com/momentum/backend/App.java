@@ -15,13 +15,16 @@ import com.momentum.backend.db.EnrolmentRepository;
 import com.momentum.backend.db.GoalRepository;
 import com.momentum.backend.db.PointsRepository;
 import com.momentum.backend.db.SnapshotRepository;
+import com.momentum.backend.db.StatsRepository;
 import com.momentum.backend.db.StreakRepository;
+import com.momentum.backend.db.StudySessionRepository;
 import com.momentum.backend.db.UserRepository;
 import com.momentum.backend.goals.GoalController;
 import com.momentum.backend.learntech.CoursesResponse;
 import com.momentum.backend.learntech.LearnTechClient;
 import com.momentum.backend.learntech.LearnTechException;
 import com.momentum.backend.profile.ProfileController;
+import com.momentum.backend.sessions.StudySessionController;
 import com.momentum.backend.sync.SyncService;
 import io.javalin.Javalin;
 
@@ -54,11 +57,13 @@ public class App {
         StreakRepository streakRepository = new StreakRepository(database);
         SnapshotRepository snapshotRepository = new SnapshotRepository(database);
         ActivityLogRepository activityLogRepository = new ActivityLogRepository(database);
+        StudySessionRepository studySessionRepository = new StudySessionRepository(database);
+        StatsRepository statsRepository = new StatsRepository(database);
 
         // Talks to the LearnTech API (or the sample files, if base_url is "sample").
         LearnTechClient learnTechClient = new LearnTechClient(config);
         SyncService syncService = new SyncService(learnTechClient, courseRepository,
-                userRepository, enrolmentRepository, snapshotRepository);
+                userRepository, enrolmentRepository, snapshotRepository, pointsRepository);
 
         // Controllers handle requests from the app.
         TokenService tokenService = new TokenService(config);
@@ -66,8 +71,9 @@ public class App {
         GoalController goalController = new GoalController(goalRepository, checkInRepository, courseRepository);
         ProfileController profileController = new ProfileController(userRepository, snapshotRepository);
         AdminController adminController = new AdminController(userRepository, courseRepository,
-                badgeRepository, activityLogRepository);
-        CourseController courseController = new CourseController(courseRepository);
+                badgeRepository, activityLogRepository, statsRepository);
+        CourseController courseController = new CourseController(courseRepository, enrolmentRepository);
+        StudySessionController studySessionController = new StudySessionController(studySessionRepository);
 
         // In Javalin 7, the port and every route are set up inside this
         // block, before the server starts. The block's variable is called
@@ -138,6 +144,15 @@ public class App {
             // Courses (see courses/CourseController.java)
             // -----------------------------------------------------
             javalinConfig.routes.get("/courses", courseController::getCatalogue);
+            javalinConfig.routes.get("/me/courses", courseController::getMyCourses);
+
+            // -----------------------------------------------------
+            // Study timetable (see sessions/StudySessionController.java)
+            // -----------------------------------------------------
+            javalinConfig.routes.get("/study-sessions", studySessionController::getAll);
+            javalinConfig.routes.post("/study-sessions", studySessionController::create);
+            javalinConfig.routes.put("/study-sessions/{id}", studySessionController::update);
+            javalinConfig.routes.delete("/study-sessions/{id}", studySessionController::delete);
 
             // -----------------------------------------------------
             // Goals and check-ins (see goals/GoalController.java)
@@ -154,6 +169,7 @@ public class App {
             // -----------------------------------------------------
             // Admin (see admin/AdminController.java)
             // -----------------------------------------------------
+            javalinConfig.routes.get("/admin/stats", adminController::getStats);
             javalinConfig.routes.get("/admin/users", adminController::getUsers);
             javalinConfig.routes.get("/admin/users/{id}", adminController::getUser);
             javalinConfig.routes.put("/admin/users/{id}/status", adminController::setUserStatus);

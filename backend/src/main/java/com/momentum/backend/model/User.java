@@ -10,5 +10,7 @@ public class User {
     public String fullName;
     public String role;
     public String status;
+    public String lastLoginAt;   // null if they never logged in
+    public Integer courseCount;  // only filled in for the admin's user list
 
 }

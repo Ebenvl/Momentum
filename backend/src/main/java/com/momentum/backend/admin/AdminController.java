@@ -4,6 +4,7 @@ import com.momentum.backend.auth.CurrentUser;
 import com.momentum.backend.db.ActivityLogRepository;
 import com.momentum.backend.db.BadgeRepository;
 import com.momentum.backend.db.CourseRepository;
+import com.momentum.backend.db.StatsRepository;
 import com.momentum.backend.db.UserRepository;
 import com.momentum.backend.model.Badge;
 import com.momentum.backend.model.BadgeRequest;
@@ -26,13 +27,16 @@ public class AdminController {
     private final CourseRepository courseRepository;
     private final BadgeRepository badgeRepository;
     private final ActivityLogRepository activityLogRepository;
+    private final StatsRepository statsRepository;
 
     public AdminController(UserRepository userRepository, CourseRepository courseRepository,
-                           BadgeRepository badgeRepository, ActivityLogRepository activityLogRepository) {
+                           BadgeRepository badgeRepository, ActivityLogRepository activityLogRepository,
+                           StatsRepository statsRepository) {
         this.userRepository = userRepository;
         this.courseRepository = courseRepository;
         this.badgeRepository = badgeRepository;
         this.activityLogRepository = activityLogRepository;
+        this.statsRepository = statsRepository;
     }
 
     // =====================================================
@@ -150,6 +154,22 @@ public class AdminController {
             } else {
                 ctx.status(404).json(Map.of("error", "user not found"));
             }
+        } catch (SQLException e) {
+            ctx.status(500).json(Map.of("error", "something went wrong, try again"));
+        }
+    }
+
+    // -----------------------------------------------------
+    // GET /admin/stats   the numbers on the admin dashboard
+    // -----------------------------------------------------
+    public void getStats(Context ctx) {
+
+        if (!requireAdmin(ctx)) {
+            return;
+        }
+
+        try {
+            ctx.json(statsRepository.getAdminStats());
         } catch (SQLException e) {
             ctx.status(500).json(Map.of("error", "something went wrong, try again"));
         }

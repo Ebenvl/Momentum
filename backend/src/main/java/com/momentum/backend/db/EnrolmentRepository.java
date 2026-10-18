@@ -1,8 +1,13 @@
 package com.momentum.backend.db;
 
+import com.momentum.backend.model.Enrolment;
+
 import java.sql.Connection;
 import java.sql.PreparedStatement;
+import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.util.ArrayList;
+import java.util.List;
 
 // Reads and saves enrolments in the Enrolments table.
 public class EnrolmentRepository {
@@ -49,4 +54,39 @@ public class EnrolmentRepository {
         }
     }
 
+    // The learner's courses and how far they are with each, as of the last sync.
+    public List<Enrolment> findEnrolmentsForUser(int userId) throws SQLException {
+
+        String sql = "SELECT enrolment_id, user_id, course_id, state, time_spent_minutes, assessment_status, "
+                   + "score, score_max, first_access, completed_on, last_synced_at "
+                   + "FROM Enrolments WHERE user_id = ?";
+
+        List<Enrolment> enrolments = new ArrayList<>();
+
+        try (Connection connection = database.getConnection();
+             PreparedStatement statement = connection.prepareStatement(sql)) {
+
+            statement.setInt(1, userId);
+
+            try (ResultSet results = statement.executeQuery()) {
+                while (results.next()) {
+                    Enrolment enrolment = new Enrolment();
+                    enrolment.enrolmentId = results.getInt("enrolment_id");
+                    enrolment.userId = results.getInt("user_id");
+                    enrolment.courseId = results.getInt("course_id");
+                    enrolment.state = results.getString("state");
+                    enrolment.timeSpentMinutes = results.getInt("time_spent_minutes");
+                    enrolment.assessmentStatus = results.getString("assessment_status");
+                    enrolment.score = results.getObject("score", Double.class);
+                    enrolment.scoreMax = results.getObject("score_max", Double.class);
+                    enrolment.firstAccess = results.getString("first_access");
+                    enrolment.completedOn = results.getString("completed_on");
+                    enrolment.lastSyncedAt = results.getString("last_synced_at");
+                    enrolments.add(enrolment);
+                }
+            }
+        }
+
+        return enrolments;
+    }
 }

@@ -1,0 +1,132 @@
+
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="#F4F6FA"
+    android:fillViewport="true">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:gravity="center_horizontal"
+        android:padding="20dp">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:gravity="center"
+            android:padding="24dp"
+            android:background="@drawable/bg_card">
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="LEARNTECH MOMENTUM"
+                android:textColor="#7666E8"
+                android:textStyle="bold"
+                android:textSize="24sp"
+                android:gravity="center"
+                android:paddingBottom="12dp" />
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="🏆"
+                android:textSize="42sp"
+                android:paddingBottom="8dp" />
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="CERTIFICATE OF COMPLETION"
+                android:textColor="#071D35"
+                android:textStyle="bold"
+                android:textSize="20sp"
+                android:gravity="center"
+                android:paddingBottom="18dp" />
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="This certificate is proudly presented to"
+                android:textColor="#687783"
+                android:textSize="14sp"
+                android:gravity="center" />
+
+            <TextView
+                android:id="@+id/tvCertificateStudent"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Student Name"
+                android:textColor="#7666E8"
+                android:textStyle="bold"
+                android:textSize="26sp"
+                android:gravity="center"
+                android:paddingTop="12dp"
+                android:paddingBottom="16dp" />
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="for successfully completing"
+                android:textColor="#687783"
+                android:textSize="14sp"
+                android:gravity="center" />
+
+            <TextView
+                android:id="@+id/tvCertificateCourse"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Course Name"
+                android:textColor="#071D35"
+                android:textStyle="bold"
+                android:textSize="21sp"
+                android:gravity="center"
+                android:paddingTop="12dp"
+                android:paddingBottom="18dp" />
+
+            <TextView
+                android:id="@+id/tvCertificateDate"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Completion date"
+                android:textColor="#687783"
+                android:textSize="14sp"
+                android:gravity="center"
+                android:paddingBottom="20dp" />
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Keep learning. Keep growing."
+                android:textColor="#35B8A5"
+                android:textStyle="italic"
+                android:textSize="16sp"
+                android:gravity="center"
+                android:paddingBottom="12dp" />
+
+        </LinearLayout>
+
+        <Button
+            android:id="@+id/btnDownloadCertificate"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Download Certificate as PDF"
+            android:textColor="#FFFFFF"
+            android:backgroundTint="#7666E8"
+            android:layout_marginTop="18dp" />
+
+        <Button
+            android:id="@+id/tvCertificateBack"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Back"
+            android:textColor="#071D35"
+            android:backgroundTint="#EDEAFF"
+            android:layout_marginTop="8dp" />
+
+    </LinearLayout>
+
+</ScrollView>

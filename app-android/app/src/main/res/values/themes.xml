@@ -6,4 +6,27 @@
     </style>
 
     <style name="Theme.Momentum" parent="Base.Theme.Momentum" />
+
+    <style name="Theme.LearningSide"
+        parent="Theme.MaterialComponents.DayNight.NoActionBar">
+
+    </style>
+
+    <!-- The extra screens: navy top bar like the admin screens, pale grey page,
+         purple rounded buttons. -->
+    <style name="Theme.LearningSide.Page"
+        parent="Theme.MaterialComponents.Light.DarkActionBar">
+        <item name="colorPrimary">@color/ltm_navy</item>
+        <item name="colorPrimaryVariant">@color/ltm_navy</item>
+        <item name="colorOnPrimary">@color/ltm_white</item>
+        <item name="colorSecondary">@color/ltm_blue</item>
+        <item name="android:windowBackground">@color/ltm_background</item>
+        <item name="materialButtonStyle">@style/Widget.LearningSide.Button</item>
+    </style>
+
+    <style name="Widget.LearningSide.Button" parent="Widget.MaterialComponents.Button">
+        <item name="cornerRadius">24dp</item>
+        <item name="android:textAllCaps">false</item>
+        <item name="backgroundTint">@color/ltm_blue</item>
+    </style>
 </resources>

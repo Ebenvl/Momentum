@@ -1,0 +1,111 @@
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="#F4F6FA"
+    android:fillViewport="true">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:padding="20dp">
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Study Timetable"
+            android:textColor="#7666E8"
+            android:textSize="28sp"
+            android:textStyle="bold"
+            android:layout_marginBottom="8dp" />
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Plan your learning sessions and stay on track."
+            android:textColor="#687783"
+            android:textSize="15sp"
+            android:layout_marginBottom="24dp" />
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Day of the week"
+            android:textColor="#071D35"
+            android:textStyle="bold" />
+
+        <Spinner
+            android:id="@+id/spinnerDay"
+            android:layout_width="match_parent"
+            android:layout_height="50dp"
+            android:layout_marginBottom="12dp"
+            android:backgroundTint="#7666E8" />
+
+        <EditText
+            android:id="@+id/editStudyTime"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:hint="Time (e.g. 14:00 - 15:00)"
+            android:inputType="text"
+            android:padding="14dp"
+            android:backgroundTint="#7666E8" />
+
+        <EditText
+            android:id="@+id/editStudyCourse"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:hint="Course or subject"
+            android:inputType="textCapSentences"
+            android:padding="14dp"
+            android:layout_marginTop="12dp"
+            android:backgroundTint="#7666E8" />
+
+        <EditText
+            android:id="@+id/editStudyTask"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:hint="What will you study?"
+            android:inputType="textCapSentences|textMultiLine"
+            android:minLines="2"
+            android:gravity="top"
+            android:padding="14dp"
+            android:layout_marginTop="12dp"
+            android:backgroundTint="#7666E8" />
+
+        <Button
+            android:id="@+id/btnAddStudySession"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Add Study Session"
+            android:textColor="#FFFFFF"
+            android:backgroundTint="#7666E8"
+            android:layout_marginTop="16dp" />
+
+        <Button
+            android:id="@+id/btnCancelEdit"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Cancel Edit"
+            android:visibility="gone"
+            android:layout_marginTop="8dp" />
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="My Study Plan"
+            android:textColor="#7666E8"
+            android:textSize="22sp"
+            android:textStyle="bold"
+            android:layout_marginTop="28dp"
+            android:layout_marginBottom="12dp" />
+
+        <LinearLayout
+            android:id="@+id/layoutStudySessions"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical">
+
+        </LinearLayout>
+
+    </LinearLayout>
+</ScrollView>

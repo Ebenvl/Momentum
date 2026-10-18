@@ -1,0 +1,212 @@
+
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@color/ltm_background"
+    android:fillViewport="true">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:padding="20dp">
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="🏆 My Achievements"
+            android:textColor="@color/ltm_navy"
+            android:textSize="28sp"
+            android:textStyle="bold" />
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:text="Celebrate every step of your learning journey!"
+            android:textColor="@color/ltm_muted"
+            android:textSize="15sp" />
+
+        <!-- Study streak card -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="22dp"
+            android:background="@drawable/bg_card"
+            android:elevation="3dp"
+            android:orientation="vertical"
+            android:padding="18dp">
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="🔥 Your Study Streak"
+                android:textColor="@color/ltm_navy"
+                android:textSize="20sp"
+                android:textStyle="bold" />
+
+            <TextView
+                android:id="@+id/tvStudyStreak"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="12dp"
+                android:text="🔥 Study streak: 0 days"
+                android:textColor="@color/ltm_green"
+                android:textSize="22sp"
+                android:textStyle="bold" />
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="6dp"
+                android:text="Keep learning regularly to build your streak!"
+                android:textColor="@color/ltm_muted"
+                android:textSize="14sp" />
+
+        </LinearLayout>
+
+        <!-- Learning statistics card -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="18dp"
+            android:background="@drawable/bg_card"
+            android:elevation="3dp"
+            android:orientation="vertical"
+            android:padding="18dp">
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Your Learning Statistics"
+                android:textColor="@color/ltm_navy"
+                android:textSize="20sp"
+                android:textStyle="bold" />
+
+            <TextView
+                android:id="@+id/tvCompletedCourses"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="16dp"
+                android:text="Courses completed: 0"
+                android:textColor="@color/ltm_text"
+                android:textSize="16sp" />
+
+            <TextView
+                android:id="@+id/tvCompletedGoals"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="12dp"
+                android:text="Goals completed: 0"
+                android:textColor="@color/ltm_text"
+                android:textSize="16sp" />
+
+            <TextView
+                android:id="@+id/tvLearningProgress"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="12dp"
+                android:text="Overall learning progress: 0%"
+                android:textColor="@color/ltm_blue"
+                android:textSize="16sp"
+                android:textStyle="bold" />
+
+        </LinearLayout>
+
+        <!-- Badge collection -->
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="26dp"
+            android:text="Badge Collection"
+            android:textColor="@color/ltm_navy"
+            android:textSize="22sp"
+            android:textStyle="bold" />
+
+        <ProgressBar
+            android:id="@+id/progressAchievements"
+            style="?android:attr/progressBarStyleHorizontal"
+            android:layout_width="match_parent"
+            android:layout_height="12dp"
+            android:layout_marginTop="16dp"
+            android:max="5"
+            android:progress="0"
+            android:progressTint="@color/ltm_green"
+            android:progressBackgroundTint="@color/ltm_blue_light" />
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:text="Achievements unlocked out of 5"
+            android:textColor="@color/ltm_muted"
+            android:textSize="13sp" />
+
+        <TextView
+            android:id="@+id/tvFirstCourse"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="18dp"
+            android:background="@drawable/bg_card"
+            android:padding="16dp"
+            android:text="First Steps"
+            android:textColor="@color/ltm_navy"
+            android:textSize="15sp" />
+
+        <TextView
+            android:id="@+id/tvCourseMaster"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="12dp"
+            android:background="@drawable/bg_card"
+            android:padding="16dp"
+            android:text="Course Master"
+            android:textColor="@color/ltm_navy"
+            android:textSize="15sp" />
+
+        <TextView
+            android:id="@+id/tvFirstGoal"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="12dp"
+            android:background="@drawable/bg_card"
+            android:padding="16dp"
+            android:text="Goal Getter"
+            android:textColor="@color/ltm_navy"
+            android:textSize="15sp" />
+
+        <TextView
+            android:id="@+id/tvGoalCrusher"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="12dp"
+            android:background="@drawable/bg_card"
+            android:padding="16dp"
+            android:text="Goal Crusher"
+            android:textColor="@color/ltm_navy"
+            android:textSize="15sp" />
+
+        <TextView
+            android:id="@+id/tvLearningStar"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="12dp"
+            android:background="@drawable/bg_card"
+            android:padding="16dp"
+            android:text="Learning Star"
+            android:textColor="@color/ltm_navy"
+            android:textSize="15sp" />
+
+        <Button
+            android:id="@+id/btnBack"
+            android:layout_width="match_parent"
+            android:layout_height="54dp"
+            android:layout_marginTop="26dp"
+            android:layout_marginBottom="20dp"
+            android:backgroundTint="@color/ltm_blue"
+            android:text="BACK TO DASHBOARD"
+            android:textColor="@color/ltm_white"
+            android:textStyle="bold" />
+
+    </LinearLayout>
+</ScrollView>

@@ -205,7 +205,10 @@ public class UserRepository {
     // Everyone with an account, for the admin's user list. The password hash is left out.
     public List<User> findAllUsers() throws SQLException {
 
-        String sql = "SELECT user_id, idst, email, full_name, role, status FROM Users ORDER BY full_name";
+        // course_count counts each user's rows in Enrolments
+        String sql = "SELECT user_id, idst, email, full_name, role, status, last_login_at, "
+                   + "(SELECT COUNT(*) FROM Enrolments WHERE Enrolments.user_id = Users.user_id) AS course_count "
+                   + "FROM Users ORDER BY full_name";
 
         List<User> users = new ArrayList<>();
 
@@ -221,6 +224,8 @@ public class UserRepository {
                 user.fullName = results.getString("full_name");
                 user.role = results.getString("role");
                 user.status = results.getString("status");
+                user.lastLoginAt = results.getString("last_login_at");
+                user.courseCount = results.getInt("course_count");
                 users.add(user);
             }
         }

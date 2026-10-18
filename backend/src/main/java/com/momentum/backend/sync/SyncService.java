@@ -2,6 +2,7 @@ package com.momentum.backend.sync;
 
 import com.momentum.backend.db.CourseRepository;
 import com.momentum.backend.db.EnrolmentRepository;
+import com.momentum.backend.db.PointsRepository;
 import com.momentum.backend.db.SnapshotRepository;
 import com.momentum.backend.db.UserRepository;
 import com.momentum.backend.learntech.ApiCourse;
@@ -27,15 +28,17 @@ public class SyncService {
     private final UserRepository userRepository;
     private final EnrolmentRepository enrolmentRepository;
     private final SnapshotRepository snapshotRepository;
+    private final PointsRepository pointsRepository;
 
     public SyncService(LearnTechClient learnTechClient, CourseRepository courseRepository,
                        UserRepository userRepository, EnrolmentRepository enrolmentRepository,
-                       SnapshotRepository snapshotRepository) {
+                       SnapshotRepository snapshotRepository, PointsRepository pointsRepository) {
         this.learnTechClient = learnTechClient;
         this.courseRepository = courseRepository;
         this.userRepository = userRepository;
         this.enrolmentRepository = enrolmentRepository;
         this.snapshotRepository = snapshotRepository;
+        this.pointsRepository = pointsRepository;
     }
 
     // Saves LearnTech's whole course catalogue into the Courses table.

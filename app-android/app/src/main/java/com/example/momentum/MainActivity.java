@@ -1,24 +1,1575 @@
 package com.example.momentum;
 
+import android.app.AlertDialog;
+import android.content.Context;
+import android.content.res.ColorStateList;
+import android.graphics.Canvas;
+import android.graphics.Color;
+import android.graphics.Paint;
+import android.graphics.Path;
+import android.graphics.Rect;
+import android.graphics.RectF;
+import android.graphics.SweepGradient;
+import android.graphics.Typeface;
+import android.graphics.drawable.Drawable;
+import android.graphics.drawable.GradientDrawable;
 import android.os.Bundle;
+import android.text.Editable;
+import android.text.TextWatcher;
+import android.view.Gravity;
+import android.view.Menu;
+import android.view.View;
+import android.view.ViewGroup;
+import android.widget.Button;
+import android.widget.EditText;
+import android.widget.FrameLayout;
+import android.widget.HorizontalScrollView;
+import android.widget.ImageView;
+import android.widget.LinearLayout;
+import android.widget.ScrollView;
+import android.widget.TextView;
+import android.widget.Toast;
 
-import androidx.activity.EdgeToEdge;
+import androidx.activity.OnBackPressedCallback;
 import androidx.appcompat.app.AppCompatActivity;
-import androidx.core.graphics.Insets;
-import androidx.core.view.ViewCompat;
-import androidx.core.view.WindowInsetsCompat;
+import androidx.core.view.WindowCompat;
+import androidx.core.view.WindowInsetsControllerCompat;
+
+import com.google.android.material.bottomnavigation.BottomNavigationView;
+import com.google.android.material.navigation.NavigationBarView;
+
+import java.text.SimpleDateFormat;
+import java.util.ArrayList;
+import java.util.Date;
+import java.util.Locale;
+import android.content.Intent;
+import android.text.InputType;
+import com.example.momentum.activities.AchievementsActivity;
+import com.example.momentum.activities.CertificateActivity;
+import com.example.momentum.activities.LoginActivity;
+import com.example.momentum.activities.MomentumCoachActivity;
+import com.example.momentum.activities.MomentumMapActivity;
+import com.example.momentum.activities.RemindersActivity;
+import com.example.momentum.activities.SignupActivity;
+import com.example.momentum.activities.StudyCoachActivity;
+import com.example.momentum.activities.StudyTimetableActivity;
+import com.example.momentum.admin.AdminPanel;
+import com.example.momentum.model.Enrolment;
+import com.example.momentum.data.ApiCallback;
+import com.example.momentum.data.Session;
+import com.example.momentum.model.LeaderboardEntry;
+import com.example.momentum.model.User;
+import com.example.momentum.service.AuthService;
+import com.example.momentum.service.CourseService;
+import com.example.momentum.service.GoalService;
+import com.example.momentum.service.LeaderboardService;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Set;
 
 public class MainActivity extends AppCompatActivity {
 
+   // colors used throughout the app
+    private static final int NAVY = Color.rgb(7, 59, 76);
+    private static final int DEEP_NAVY = Color.rgb(7, 29, 53);
+    private static final int PURPLE = Color.rgb(118, 102, 232);
+    private static final int LIGHT_PURPLE = Color.rgb(146, 132, 255);
+    private static final int TEAL = Color.rgb(53, 184, 165);
+    private static final int TEAL_DARK = Color.rgb(14, 140, 124);
+    private static final int TEAL_BG = Color.rgb(222, 246, 241);
+    private static final int GOLD = Color.rgb(244, 185, 66);
+    private static final int ORANGE = Color.rgb(228, 108, 40);
+    private static final int ORANGE_BG = Color.rgb(253, 235, 224);
+    private static final int MUTED = Color.rgb(104, 119, 131);
+    private static final int PALE = Color.rgb(244, 246, 250);
+    private static final int TRACK = Color.rgb(225, 230, 240);
+    private static final int SOFT_PURPLE = Color.rgb(237, 234, 255);
+    private static final int WHITE = Color.WHITE;
+
+    private static final int TAB_HOME = 1, TAB_COURSES = 2, TAB_GOALS = 3,
+            TAB_LEADERBOARD = 4, TAB_PROFILE = 5;
+
+    // Statuses
+    private FrameLayout pageContainer;
+    private BottomNavigationView bottomNavigation;
+    private String currentTab = "Home";
+    private String currentScreen = "main";
+    private String courseFilter = "In Progress";
+    private String searchQuery = "";
+    private String selectedPeriod = "Weekly";
+    private String courseTab = "Overview";
+    private String selectedModule = "";
+    private Course selectedCourse;
+    private final ArrayList<Course> courses = new ArrayList<>();
+    private final ArrayList<Goal> goals = new ArrayList<>();
+    private final ArrayList<LeaderEntry> leaderboard = new ArrayList<>();
+    private int nextGoalId = 1;
+    private String userName = "";
+    private int userXp = 0;
+    private int monthlyGoal = 0;
+    private int streakDays = 0;
+
+    // Backend connection
+    private final AuthService authService = new AuthService();
+    private final GoalService goalService = new GoalService();
+    private final CourseService courseService = new CourseService();
+    private final LeaderboardService leaderboardService = new LeaderboardService();
+    private final ArrayList<com.example.momentum.model.Course> catalogue = new ArrayList<>();
+    private int loadedUserId = -1;
+
+    private static class Course {
+        String title = "", instructor = "", description = "", status = "New";
+        String completedOn = "";
+        int xp, enrolled;
+        float rating;
+        ArrayList<String> outcomes = new ArrayList<>();
+        ArrayList<String> modules = new ArrayList<>();
+    }
+
+    private static class Goal {
+        int id;
+        String title;
+        String course = "", target = "", lastAccessed = "", completedDate = "";
+        String status = "On Track";
+        boolean completed;
+        Goal(int id, String title) { this.id = id; this.title = title; }
+    }
+
+    private static class LeaderEntry {
+        String name = "";
+        int xp;
+        int trend;
+        boolean you;
+    }
+
+    private static class Page {
+        FrameLayout root;
+        LinearLayout content;
+        Page(FrameLayout root, LinearLayout content) {
+            this.root = root;
+            this.content = content;
+        }
+    }
+
+
+    // The app'sLifecycle
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        EdgeToEdge.enable(this);
-        setContentView(R.layout.activity_main);
-        ViewCompat.setOnApplyWindowInsetsListener(findViewById(R.id.main), (v, insets) -> {
-            Insets systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars());
-            v.setPadding(systemBars.left, systemBars.top, systemBars.right, systemBars.bottom);
-            return insets;
+        WindowCompat.setDecorFitsSystemWindows(getWindow(), false);
+        getWindow().setStatusBarColor(Color.TRANSPARENT);
+        getWindow().setNavigationBarColor(Color.TRANSPARENT);
+        showSplash();
+
+        new android.os.Handler(android.os.Looper.getMainLooper()).postDelayed(() -> {
+            buildAppShell();
+            showStudentTab("Home");
+        }, 1600);
+
+        getOnBackPressedDispatcher().addCallback(this, new OnBackPressedCallback(true) {
+            @Override public void handleOnBackPressed() {
+                switch (currentScreen) {
+                    case "lesson": showCourseDetails(); break;
+                    case "courseDetails": showStudentTab("Courses"); break;
+                    case "adminSection": showAdminDashboard(); break;
+                    case "adminDashboard": showStudentTab("Profile"); break;
+                    default:
+                        if (!"Home".equals(currentTab)) showStudentTab("Home");
+                        else finish();
+                }
+            }
         });
+    }
+
+    // Coming back from the login or sign-up screen, or another screen.
+    // Loads the learner's data once they are logged in.
+    @Override
+    protected void onResume() {
+        super.onResume();
+        if (bottomNavigation == null) return;
+        if (Session.isLoggedIn() && Session.getUser().id != loadedUserId) {
+            loadedUserId = Session.getUser().id;
+            userName = Session.getUser().fullName;
+            streakDays = getSharedPreferences("StudyStreakPrefs_" + loadedUserId, MODE_PRIVATE)
+                    .getInt("studyStreak", 0);
+            loadData();
+            showStudentTab("Home");
+        }
+    }
+
+    // Other screens can ask to open one of the tabs, like Courses or Goals.
+    @Override
+    protected void onNewIntent(Intent intent) {
+        super.onNewIntent(intent);
+        String tab = intent.getStringExtra("tab");
+        if (tab != null && bottomNavigation != null) showStudentTab(tab);
+    }
+
+    private int dp(float value) {
+        return (int) (value * getResources().getDisplayMetrics().density + 0.5f);
+    }
+
+    private int statusBarHeight() {
+        int id = getResources().getIdentifier("status_bar_height", "dimen", "android");
+        return id > 0 ? getResources().getDimensionPixelSize(id) : dp(24);
+    }
+
+    private void setSystemBarIcons(boolean lightBackground) {
+        WindowInsetsControllerCompat c = WindowCompat.getInsetsController(getWindow(), getWindow().getDecorView());
+        c.setAppearanceLightStatusBars(lightBackground);
+        c.setAppearanceLightNavigationBars(true);
+    }
+
+    private void showSplash() {
+        setSystemBarIcons(true);
+        FrameLayout frame = new FrameLayout(this);
+        frame.setBackgroundColor(WHITE);
+        ImageView logo = new ImageView(this);
+        logo.setImageResource(R.drawable.learntech_logo);
+        logo.setScaleType(ImageView.ScaleType.FIT_CENTER);
+        FrameLayout.LayoutParams lp = new FrameLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, dp(150), Gravity.CENTER);
+        lp.setMargins(dp(28), 0, dp(28), 0);
+        frame.addView(logo, lp);
+        setContentView(frame);
+    }
+
+
+    // bottom navigation and app's shell
+
+    private void buildAppShell() {
+        setSystemBarIcons(false);
+        LinearLayout shell = new LinearLayout(this);
+        shell.setOrientation(LinearLayout.VERTICAL);
+        shell.setBackgroundColor(NAVY);
+
+        pageContainer = new FrameLayout(this);
+        shell.addView(pageContainer, new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, 0, 1f));
+
+        bottomNavigation = new BottomNavigationView(this);
+        bottomNavigation.setBackgroundColor(WHITE);
+        bottomNavigation.setElevation(dp(8));
+        bottomNavigation.setLabelVisibilityMode(NavigationBarView.LABEL_VISIBILITY_LABELED);
+        bottomNavigation.setItemHorizontalTranslationEnabled(false);
+        bottomNavigation.setItemActiveIndicatorEnabled(false);
+
+        Menu menu = bottomNavigation.getMenu();
+        menu.add(Menu.NONE, TAB_HOME, 0, "Home").setIcon(new Icon("home", 0));
+        menu.add(Menu.NONE, TAB_COURSES, 1, "Courses").setIcon(new Icon("book", 0));
+        menu.add(Menu.NONE, TAB_GOALS, 2, "Goals").setIcon(new Icon("target", 0));
+        menu.add(Menu.NONE, TAB_LEADERBOARD, 3, "Leaderboard").setIcon(new Icon("trophy", 0));
+        menu.add(Menu.NONE, TAB_PROFILE, 4, "Profile").setIcon(new Icon("person", 0));
+
+        ColorStateList navColors = new ColorStateList(
+                new int[][]{new int[]{android.R.attr.state_checked}, new int[]{}},
+                new int[]{PURPLE, MUTED});
+        bottomNavigation.setItemIconTintList(navColors);
+        bottomNavigation.setItemTextColor(navColors);
+        bottomNavigation.setOnItemSelectedListener(item -> {
+            switch (item.getItemId()) {
+                case TAB_HOME: showStudentTab("Home"); return true;
+                case TAB_COURSES: showStudentTab("Courses"); return true;
+                case TAB_GOALS: showStudentTab("Goals"); return true;
+                case TAB_LEADERBOARD: showStudentTab("Leaderboard"); return true;
+                case TAB_PROFILE: showStudentTab("Profile"); return true;
+                default: return false;
+            }
+        });
+
+        shell.addView(bottomNavigation, new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
+        setContentView(shell);
+    }
+
+    private void checkTab(int id) {
+        bottomNavigation.getMenu().findItem(id).setChecked(true);
+    }
+
+    private void showStudentTab(String tab) {
+        currentTab = tab;
+        currentScreen = "main";
+        bottomNavigation.setVisibility(View.VISIBLE);
+        int id = TAB_HOME;
+        if ("Courses".equals(tab)) id = TAB_COURSES;
+        else if ("Goals".equals(tab)) id = TAB_GOALS;
+        else if ("Leaderboard".equals(tab)) id = TAB_LEADERBOARD;
+        else if ("Profile".equals(tab)) id = TAB_PROFILE;
+        checkTab(id);
+
+        switch (tab) {
+            case "Courses": showCourses(); break;
+            case "Goals": showGoals(); break;
+            case "Leaderboard": showLeaderboard(); break;
+            case "Profile": showProfile(); break;
+            default: currentTab = "Home"; showHome(); break;
+        }
+    }
+
+    private void showPage(View page, boolean hideNav) {
+        pageContainer.removeAllViews();
+        pageContainer.addView(page, new FrameLayout.LayoutParams(-1, -1));
+        bottomNavigation.setVisibility(hideNav ? View.GONE : View.VISIBLE);
+    }
+
+
+    private GradientDrawable rounded(int color, int radius) {
+        GradientDrawable d = new GradientDrawable();
+        d.setColor(color);
+        d.setCornerRadius(dp(radius));
+        return d;
+    }
+
+    private GradientDrawable oval(int color) {
+        GradientDrawable d = new GradientDrawable();
+        d.setShape(GradientDrawable.OVAL);
+        d.setColor(color);
+        return d;
+    }
+
+    // Design elements and formating (bg image, logo inserts and text)
+
+    private Page createPage(String title, String subtitle, boolean showLogo) {
+        FrameLayout root = new FrameLayout(this);
+        ImageView bg = new ImageView(this);
+        bg.setImageResource(R.drawable.app_bg);
+        bg.setScaleType(ImageView.ScaleType.CENTER_CROP);
+        root.addView(bg, new FrameLayout.LayoutParams(-1, -1));
+
+        ScrollView scroll = new ScrollView(this);
+        scroll.setFillViewport(false);
+        scroll.setClipToPadding(false);
+        scroll.setBackgroundColor(Color.TRANSPARENT);
+        LinearLayout content = new LinearLayout(this);
+        content.setOrientation(LinearLayout.VERTICAL);
+        content.setPadding(dp(20), statusBarHeight() + dp(20), dp(20), dp(24));
+        scroll.addView(content, new ScrollView.LayoutParams(-1, -2));
+        root.addView(scroll, new FrameLayout.LayoutParams(-1, -1));
+
+        if (title != null) {
+            LinearLayout header = new LinearLayout(this);
+            header.setOrientation(LinearLayout.HORIZONTAL);
+            header.setGravity(Gravity.CENTER_VERTICAL);
+
+            LinearLayout titles = new LinearLayout(this);
+            titles.setOrientation(LinearLayout.VERTICAL);
+            titles.addView(text(title, WHITE, 26, true));
+            if (subtitle != null && !subtitle.isEmpty()) {
+                TextView sub = text(subtitle, Color.argb(225, 255, 255, 255), 14, false);
+                sub.setPadding(0, dp(2), 0, 0);
+                titles.addView(sub);
+            }
+            header.addView(titles, new LinearLayout.LayoutParams(0, -2, 1f));
+
+            if (showLogo) {
+                ImageView logo = new ImageView(this);
+                logo.setImageResource(R.drawable.minimalist_logo);
+                logo.setScaleType(ImageView.ScaleType.FIT_CENTER);
+                GradientDrawable ring = oval(WHITE);
+                ring.setStroke(dp(3), GOLD);
+                logo.setBackground(ring);
+                logo.setPadding(dp(8), dp(8), dp(8), dp(8));
+                LinearLayout.LayoutParams logoLp = new LinearLayout.LayoutParams(dp(56), dp(56));
+                logoLp.leftMargin = dp(12);
+                header.addView(logo, logoLp);
+            }
+            content.addView(header, new LinearLayout.LayoutParams(-1, -2));
+            content.addView(new View(this), new LinearLayout.LayoutParams(1, dp(18)));
+        }
+        return new Page(root, content);
+    }
+
+    private TextView text(String value, int color, float size, boolean bold) {
+        TextView t = new TextView(this);
+        t.setText(value);
+        t.setTextColor(color);
+        t.setTextSize(size);
+        if (bold) t.setTypeface(null, Typeface.BOLD);
+        return t;
+    }
+
+    private LinearLayout cardIn(LinearLayout parent) {
+        LinearLayout c = new LinearLayout(this);
+        c.setOrientation(LinearLayout.VERTICAL);
+        c.setPadding(dp(16), dp(16), dp(16), dp(16));
+        c.setBackground(rounded(WHITE, 18));
+        LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(-1, -2);
+        lp.bottomMargin = dp(14);
+        parent.addView(c, lp);
+        return c;
+    }
+
+    private LinearLayout card(Page page) {
+        return cardIn(page.content);
+    }
+
+    private void addText(LinearLayout parent, String value, int color, float size, boolean bold) {
+        TextView t = text(value, color, size, bold);
+        LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(-1, -2);
+        lp.bottomMargin = dp(7);
+        parent.addView(t, lp);
+    }
+
+    private void addHeading(LinearLayout parent, String value) {
+        TextView t = text(value, WHITE, 18, true);
+        LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(-1, -2);
+        lp.topMargin = dp(4);
+        lp.bottomMargin = dp(10);
+        parent.addView(t, lp);
+    }
+
+    private TextView pill(String label, int fg, int bg) {
+        TextView t = text(label, fg, 11, true);
+        t.setGravity(Gravity.CENTER);
+        t.setPadding(dp(10), dp(4), dp(10), dp(4));
+        t.setBackground(rounded(bg, 12));
+        return t;
+    }
+
+    private Button button(String label, boolean outline, View.OnClickListener listener) {
+        Button b = new Button(this);
+        b.setText(label);
+        b.setAllCaps(false);
+        b.setTextSize(14);
+        b.setTypeface(null, Typeface.BOLD);
+        b.setMinHeight(dp(46));
+        b.setInputType(0);
+
+        b.setStateListAnimator(null);
+        b.setPadding(dp(16), dp(5), dp(16), dp(5));
+        if (outline) {
+            GradientDrawable d = rounded(WHITE, 28);
+            d.setStroke(dp(1), PURPLE);
+            b.setBackground(d);
+            b.setTextColor(PURPLE);
+        } else {
+            b.setBackground(rounded(PURPLE, 28));
+            b.setTextColor(WHITE);
+        }
+        LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(-1, dp(48));
+        lp.bottomMargin = dp(8);
+        b.setOnClickListener(listener);
+        b.setTag(lp);
+        return b;
+    }
+
+    private void addButton(LinearLayout parent, String label, boolean outline, View.OnClickListener listener) {
+        Button b = button(label, outline, listener);
+        parent.addView(b, (LinearLayout.LayoutParams) b.getTag());
+    }
+
+    private ImageView iconView(String type, int color, int sizeDp) {
+        ImageView v = new ImageView(this);
+        v.setImageDrawable(new Icon(type, color));
+        v.setLayoutParams(new LinearLayout.LayoutParams(dp(sizeDp), dp(sizeDp)));
+        return v;
+    }
+
+    private TextView makeChip(String label, boolean selected) {
+        TextView chip = text(label, selected ? WHITE : DEEP_NAVY, 13, true);
+        chip.setGravity(Gravity.CENTER);
+        chip.setPadding(dp(18), dp(8), dp(18), dp(8));
+        chip.setBackground(rounded(selected ? PURPLE : WHITE, 24));
+        return chip;
+    }
+
+    private void addBack(LinearLayout parent, String label, View.OnClickListener listener) {
+        TextView back = text("\u2190  " + label, WHITE, 15, true);
+        back.setPadding(0, dp(4), 0, dp(14));
+        back.setOnClickListener(listener);
+        parent.addView(back);
+    }
+
+    private void message(String title, String body) {
+        new AlertDialog.Builder(this).setTitle(title).setMessage(body)
+                .setPositiveButton("OK", (d, w) -> {}).show();
+    }
+
+    private String today() {
+        return new SimpleDateFormat("MMM d", Locale.getDefault()).format(new Date());
+    }
+
+   // Homepage
+    private void showHome() {
+        Page p = createPage(userName.isEmpty() ? "Welcome back" : "Welcome back, " + userName,
+                "Let's build some new skills today!", true);
+
+        int completedCourses = 0;
+        Course inProgress = null;
+        for (Course c : courses) {
+            if ("Completed".equals(c.status)) completedCourses++;
+            if (inProgress == null && "In Progress".equals(c.status)) inProgress = c;
+        }
+        int goalsMet = 0;
+        for (Goal g : goals) if (g.completed) goalsMet++;
+
+        // Progress card and status
+        LinearLayout progressCard = card(p);
+        progressCard.setOrientation(LinearLayout.HORIZONTAL);
+        progressCard.setGravity(Gravity.CENTER_VERTICAL);
+        float progress = monthlyGoal > 0 ? Math.min(1f, completedCourses / (float) monthlyGoal) : 0f;
+        progressCard.addView(new RingView(this, progress), new LinearLayout.LayoutParams(dp(80), dp(80)));
+        String progressMsg = monthlyGoal > 0
+                ? "You have completed " + completedCourses + " of your monthly goal of "
+                + monthlyGoal + (monthlyGoal == 1 ? " course." : " courses.")
+                : "Your monthly goal progress will appear here once you set a goal.";
+        LinearLayout.LayoutParams msgLp = new LinearLayout.LayoutParams(0, -2, 1f);
+        msgLp.leftMargin = dp(16);
+        progressCard.addView(text(progressMsg, MUTED, 14, false), msgLp);
+
+
+        addHeading(p.content, "Continue Learning");
+        LinearLayout cont = card(p);
+        if (inProgress == null) {
+            addText(cont, "No course in progress", DEEP_NAVY, 17, true);
+            addText(cont, "Courses you start will appear here so you can pick up where you left off.", MUTED, 14, false);
+            addButton(cont, "Browse courses", false, v -> showStudentTab("Courses"));
+        } else {
+            final Course current = inProgress;
+            View banner = new View(this);
+            banner.setBackground(rounded(DEEP_NAVY, 12));
+            LinearLayout.LayoutParams bannerLp = new LinearLayout.LayoutParams(-1, dp(120));
+            bannerLp.bottomMargin = dp(14);
+            cont.addView(banner, bannerLp);
+            addText(cont, current.title.toUpperCase(Locale.getDefault()), PURPLE, 12, true);
+            addText(cont, "Instructor: " + current.instructor, MUTED, 13, false);
+            cont.setOnClickListener(v -> showCourseDetails(current));
+        }
+
+        // Ativity staus
+        addHeading(p.content, "Your Activity");
+        LinearLayout stats = new LinearLayout(this);
+        stats.setOrientation(LinearLayout.HORIZONTAL);
+        stats.addView(statCard("book", PURPLE, String.valueOf(courses.size()), "ENROLLED", true), statLp(false));
+        stats.addView(statCard("target", TEAL, String.valueOf(goalsMet), "GOALS MET", true), statLp(false));
+        stats.addView(statCard("hex", GOLD, String.format(Locale.getDefault(), "%,d", userXp), "XP POINTS", false), statLp(true));
+        p.content.addView(stats, new LinearLayout.LayoutParams(-1, -2));
+
+        // The extra screens
+        p.content.addView(new View(this), new LinearLayout.LayoutParams(1, dp(18)));
+        addHeading(p.content, "More For You");
+        LinearLayout more = card(p);
+        addButton(more, "Achievements", false, v -> openScreen(AchievementsActivity.class));
+        addButton(more, "Momentum Map", true, v -> openScreen(MomentumMapActivity.class));
+        addButton(more, "Study Timetable", true, v -> openScreen(StudyTimetableActivity.class));
+        addButton(more, "Reminders", true, v -> openScreen(RemindersActivity.class));
+        addButton(more, "Study Coach", true, v -> openScreen(StudyCoachActivity.class));
+        addButton(more, "Momentum Coach", true, v -> openScreen(MomentumCoachActivity.class));
+
+        showPage(p.root, false);
+    }
+
+    // Opens one of the extra screens. Most of them need the learner to be logged in.
+    private void openScreen(Class<?> screen) {
+        if (!Session.isLoggedIn() && screen != StudyCoachActivity.class && screen != RemindersActivity.class) {
+            Toast.makeText(this, "Log in first", Toast.LENGTH_SHORT).show();
+            startActivity(new Intent(this, LoginActivity.class));
+            return;
+        }
+        startActivity(new Intent(this, screen));
+    }
+
+    private LinearLayout.LayoutParams statLp(boolean last) {
+        LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(0, -2, 1f);
+        if (!last) lp.rightMargin = dp(10);
+        return lp;
+    }
+
+    private LinearLayout statCard(String icon, int color, String value, String label, boolean unused) {
+        LinearLayout c = new LinearLayout(this);
+        c.setOrientation(LinearLayout.VERTICAL);
+        c.setGravity(Gravity.CENTER_HORIZONTAL);
+        c.setPadding(dp(8), dp(16), dp(8), dp(16));
+        c.setBackground(rounded(WHITE, 16));
+        c.addView(iconView(icon, color, 26));
+        TextView v = text(value, DEEP_NAVY, 20, true);
+        v.setGravity(Gravity.CENTER);
+        v.setPadding(0, dp(8), 0, dp(2));
+        c.addView(v, new LinearLayout.LayoutParams(-1, -2));
+        TextView l = text(label, MUTED, 11, false);
+        l.setGravity(Gravity.CENTER);
+        l.setLetterSpacing(0.06f);
+        c.addView(l, new LinearLayout.LayoutParams(-1, -2));
+        return c;
+    }
+
+
+    // Courses
+
+    private void showCourses() {
+        Page p = createPage("My Courses", "Manage and track your enrolled learning paths", false);
+
+        LinearLayout searchBox = new LinearLayout(this);
+        searchBox.setOrientation(LinearLayout.HORIZONTAL);
+        searchBox.setGravity(Gravity.CENTER_VERTICAL);
+        searchBox.setPadding(dp(18), 0, dp(14), 0);
+        searchBox.setBackground(rounded(WHITE, 28));
+        ImageView searchIcon = iconView("search", MUTED, 22);
+        searchBox.addView(searchIcon);
+        EditText search = new EditText(this);
+        search.setSingleLine(true);
+        search.setTextSize(14);
+        search.setTextColor(DEEP_NAVY);
+        search.setHintTextColor(MUTED);
+        search.setHint("Search courses, topics, skills...");
+        search.setBackgroundColor(Color.TRANSPARENT);
+        search.setPadding(dp(12), 0, 0, 0);
+        search.setText(searchQuery);
+        LinearLayout.LayoutParams searchFieldLp = new LinearLayout.LayoutParams(0, dp(52), 1f);
+        searchBox.addView(search, searchFieldLp);
+        LinearLayout.LayoutParams searchLp = new LinearLayout.LayoutParams(-1, dp(52));
+        searchLp.bottomMargin = dp(14);
+        p.content.addView(searchBox, searchLp);
+
+        HorizontalScrollView chipScroll = new HorizontalScrollView(this);
+        chipScroll.setHorizontalScrollBarEnabled(false);
+        LinearLayout filters = new LinearLayout(this);
+        filters.setOrientation(LinearLayout.HORIZONTAL);
+        for (String option : new String[]{"All", "In Progress", "Completed", "New"}) {
+            TextView chip = makeChip(option, courseFilter.equals(option));
+            LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(-2, dp(38));
+            lp.rightMargin = dp(8);
+            filters.addView(chip, lp);
+            chip.setOnClickListener(v -> { courseFilter = option; showCourses(); });
+        }
+        chipScroll.addView(filters);
+        LinearLayout.LayoutParams chipLp = new LinearLayout.LayoutParams(-1, dp(42));
+        chipLp.bottomMargin = dp(14);
+        p.content.addView(chipScroll, chipLp);
+
+        LinearLayout list = new LinearLayout(this);
+        list.setOrientation(LinearLayout.VERTICAL);
+        p.content.addView(list, new LinearLayout.LayoutParams(-1, -2));
+        renderCourseList(list);
+
+        search.addTextChangedListener(new TextWatcher() {
+            public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
+            public void onTextChanged(CharSequence s, int start, int before, int count) {
+                searchQuery = s.toString();
+                renderCourseList(list);
+            }
+            public void afterTextChanged(Editable s) {}
+        });
+        showPage(p.root, false);
+    }
+
+    private void renderCourseList(LinearLayout list) {
+        list.removeAllViews();
+        String q = searchQuery.trim().toLowerCase(Locale.ROOT);
+        int shown = 0;
+        for (Course c : courses) {
+            if (!"All".equals(courseFilter) && !courseFilter.equals(c.status)) continue;
+            if (!q.isEmpty() && !c.title.toLowerCase(Locale.ROOT).contains(q)
+                    && !c.instructor.toLowerCase(Locale.ROOT).contains(q)) continue;
+            LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(-1, -2);
+            lp.bottomMargin = dp(12);
+            list.addView(courseRow(c), lp);
+            shown++;
+        }
+        if (shown == 0) {
+            LinearLayout empty = cardIn(list);
+            boolean none = courses.isEmpty();
+            addText(empty, none ? "No courses available yet" : "No courses found", DEEP_NAVY, 17, true);
+            addText(empty, none ? "Courses will appear here when course data is connected."
+                    : "Try a different search or filter.", MUTED, 14, false);
+        }
+    }
+
+    private View courseRow(Course c) {
+        LinearLayout row = new LinearLayout(this);
+        row.setOrientation(LinearLayout.HORIZONTAL);
+        row.setGravity(Gravity.CENTER_VERTICAL);
+        row.setPadding(dp(12), dp(12), dp(12), dp(12));
+        row.setBackground(rounded(WHITE, 16));
+
+        ImageView thumb = new ImageView(this);
+        thumb.setBackground(rounded(DEEP_NAVY, 12));
+        row.addView(thumb, new LinearLayout.LayoutParams(dp(76), dp(76)));
+
+        LinearLayout info = new LinearLayout(this);
+        info.setOrientation(LinearLayout.VERTICAL);
+        info.addView(text(c.title, DEEP_NAVY, 15, true));
+        TextView inst = text("INSTRUCTOR: " + c.instructor.toUpperCase(Locale.getDefault()), MUTED, 11, true);
+        inst.setPadding(0, dp(4), 0, 0);
+        info.addView(inst);
+        LinearLayout.LayoutParams infoLp = new LinearLayout.LayoutParams(0, -2, 1f);
+        infoLp.leftMargin = dp(12);
+        row.addView(info, infoLp);
+
+        TextView xp = pill(c.xp + " XP", TEAL_DARK, TEAL_BG);
+        LinearLayout.LayoutParams xpLp = new LinearLayout.LayoutParams(-2, -2);
+        xpLp.leftMargin = dp(8);
+        row.addView(xp, xpLp);
+
+        row.setOnClickListener(v -> showCourseDetails(c));
+        return row;
+    }
+
+
+    // Goals setter and goal tracker
+
+    private void showGoals() {
+        Page p = createPage("My Goals", "Stay accountable with personalized learning milestones", false);
+
+        ArrayList<Goal> active = new ArrayList<>();
+        ArrayList<Goal> done = new ArrayList<>();
+        for (Goal g : goals) {
+            if (g.completed) done.add(g); else active.add(g);
+        }
+
+        if (goals.isEmpty()) {
+            LinearLayout empty = card(p);
+            addText(empty, "No goals added yet", DEEP_NAVY, 17, true);
+            addText(empty, "Tap the + button to add your first learning goal.", MUTED, 14, false);
+        }
+
+        for (Goal g : active) {
+            LinearLayout c = card(p);
+            LinearLayout top = new LinearLayout(this);
+            top.setOrientation(LinearLayout.HORIZONTAL);
+            top.setPadding(0, 0, 0, dp(6));
+            top.addView(text(g.title, DEEP_NAVY, 16, true), new LinearLayout.LayoutParams(0, -2, 1f));
+            boolean behind = "Behind".equals(g.status);
+            LinearLayout.LayoutParams pillLp = new LinearLayout.LayoutParams(-2, -2);
+            pillLp.leftMargin = dp(8);
+            top.addView(pill(g.status, behind ? ORANGE : TEAL_DARK, behind ? ORANGE_BG : TEAL_BG), pillLp);
+            c.addView(top, new LinearLayout.LayoutParams(-1, -2));
+            if (!g.course.isEmpty()) addText(c, "Course: " + g.course, MUTED, 13, false);
+            if (!g.target.isEmpty()) addText(c, "Target: " + g.target, DEEP_NAVY, 12, false);
+            if (!g.lastAccessed.isEmpty()) addText(c, "Last accessed: " + g.lastAccessed, DEEP_NAVY, 12, false);
+            c.setOnClickListener(v -> showGoalOptions(g));
+        }
+
+        if (!done.isEmpty()) {
+            View divider = new View(this);
+            divider.setBackgroundColor(Color.argb(80, 255, 255, 255));
+            LinearLayout.LayoutParams dLp = new LinearLayout.LayoutParams(-1, dp(1));
+            dLp.topMargin = dp(6);
+            dLp.bottomMargin = dp(14);
+            p.content.addView(divider, dLp);
+            addHeading(p.content, "Completed Goals");
+
+            for (Goal g : done) {
+                LinearLayout row = new LinearLayout(this);
+                row.setOrientation(LinearLayout.HORIZONTAL);
+                row.setGravity(Gravity.CENTER_VERTICAL);
+                row.setPadding(dp(14), dp(14), dp(14), dp(14));
+                row.setBackground(rounded(WHITE, 16));
+
+                ImageView badge = iconView("check", TEAL, 40);
+                badge.setBackground(oval(TEAL_BG));
+                badge.setPadding(dp(10), dp(10), dp(10), dp(10));
+                row.addView(badge, new LinearLayout.LayoutParams(dp(40), dp(40)));
+
+                LinearLayout info = new LinearLayout(this);
+                info.setOrientation(LinearLayout.VERTICAL);
+                info.addView(text(g.title, DEEP_NAVY, 14, true));
+                if (!g.completedDate.isEmpty()) {
+                    TextView when = text("Completed " + g.completedDate, MUTED, 12, false);
+                    when.setPadding(0, dp(2), 0, 0);
+                    info.addView(when);
+                }
+                LinearLayout.LayoutParams infoLp = new LinearLayout.LayoutParams(0, -2, 1f);
+                infoLp.leftMargin = dp(12);
+                row.addView(info, infoLp);
+
+                LinearLayout.LayoutParams rowLp = new LinearLayout.LayoutParams(-1, -2);
+                rowLp.bottomMargin = dp(10);
+                p.content.addView(row, rowLp);
+                row.setOnClickListener(v -> showGoalOptions(g));
+            }
+        }
+
+        // Floating add button +
+
+        p.content.addView(new View( this), new LinearLayout.LayoutParams(1, dp(72)));
+
+        FrameLayout fab = new FrameLayout(this);
+        GradientDrawable fabBg = new GradientDrawable(GradientDrawable.Orientation.TL_BR,
+                new int[]{PURPLE, Color.rgb(59, 130, 246)});
+        fabBg.setShape(GradientDrawable.OVAL);
+        fab.setBackground(fabBg);
+        fab.setElevation(dp(6));
+        fab.setContentDescription("Add goal");
+        ImageView plus = new ImageView(this);
+        plus.setImageDrawable(new Icon("plus", WHITE));
+        plus.setPadding(dp(16), dp(16), dp(16), dp(16));
+        fab.addView(plus, new FrameLayout.LayoutParams(-1, -1));
+        FrameLayout.LayoutParams fabLp = new FrameLayout.LayoutParams(dp(56), dp(56), Gravity.BOTTOM | Gravity.END);
+        fabLp.rightMargin = dp(20);
+        fabLp.bottomMargin = dp(20);
+        p.root.addView(fab, fabLp);
+        fab.setOnClickListener(v -> showAddGoalDialog());
+
+        showPage(p.root, false);
+    }
+
+    private EditText field(String hint) {
+        EditText e = new EditText(this);
+        e.setSingleLine(true);
+        e.setHint(hint);
+        return e;
+    }
+
+    private void showAddGoalDialog() {
+        LinearLayout form = new LinearLayout(this);
+        form.setOrientation(LinearLayout.VERTICAL);
+        form.setPadding(dp(24), dp(8), dp(24), 0);
+        EditText title = field("Goal title");
+        EditText course = field("Course (optional)");
+        EditText target = field("Target date, e.g. Dec 15 (optional)");
+        form.addView(title);
+        form.addView(course);
+        form.addView(target);
+
+        new AlertDialog.Builder(this)
+                .setTitle("New learning goal")
+                .setView(form)
+                .setPositiveButton("Add", (d, w) -> {
+                    String t = title.getText().toString().trim();
+                    if (t.isEmpty()) {
+                        Toast.makeText(this, "Enter a goal title", Toast.LENGTH_SHORT).show();
+                        return;
+                    }
+                    if (!Session.isLoggedIn()) {
+                        Toast.makeText(this, "Log in to add goals", Toast.LENGTH_SHORT).show();
+                        return;
+                    }
+
+                    // The course is optional, but if one is typed it has to be a real course
+                    String courseName = course.getText().toString().trim();
+                    Integer courseId = null;
+                    if (!courseName.isEmpty()) {
+                        courseId = findCourseId(courseName);
+                        if (courseId == null) {
+                            Toast.makeText(this, "No course called " + courseName, Toast.LENGTH_SHORT).show();
+                            return;
+                        }
+                    }
+
+                    // The target date is optional, e.g. "Dec 15"
+                    String targetText = target.getText().toString().trim();
+                    String targetDate = null;
+                    if (!targetText.isEmpty()) {
+                        targetDate = toDatabaseDate(targetText);
+                        if (targetDate == null) {
+                            Toast.makeText(this, "Enter the date like Dec 15", Toast.LENGTH_SHORT).show();
+                            return;
+                        }
+                    }
+
+                    goalService.createGoal(t, courseId, targetDate, new ApiCallback<Void>() {
+                        @Override public void onSuccess(Void result) { loadGoals(); }
+                        @Override public void onError(String error) {
+                            Toast.makeText(MainActivity.this, error, Toast.LENGTH_SHORT).show();
+                        }
+                    });
+                })
+                .setNegativeButton("Cancel", null)
+                .show();
+    }
+
+    private void showGoalOptions(Goal g) {
+        final String[] items = g.completed
+                ? new String[]{"Mark as active", "Delete goal"}
+                : new String[]{"Mark as completed",
+                "Behind".equals(g.status) ? "Mark as on track" : "Mark as behind", "Delete goal"};
+        new AlertDialog.Builder(this).setTitle(g.title).setItems(items, (d, which) -> {
+            String choice = items[which];
+            ApiCallback<Void> reload = new ApiCallback<Void>() {
+                @Override public void onSuccess(Void result) { loadGoals(); }
+                @Override public void onError(String error) {
+                    Toast.makeText(MainActivity.this, error, Toast.LENGTH_SHORT).show();
+                }
+            };
+            if ("Mark as active".equals(choice)) { goalService.reopenGoal(g.id, reload); return; }
+            else if ("Mark as completed".equals(choice)) { goalService.completeGoal(g.id, reload); return; }
+            // On track and behind are only shown on this phone, they are not saved
+            else if ("Mark as on track".equals(choice)) g.status = "On Track";
+            else if ("Mark as behind".equals(choice)) g.status = "Behind";
+            else { goalService.deleteGoal(g.id, reload); return; }
+            g.lastAccessed = today();
+            showGoals();
+        }).show();
+    }
+
+//LeaderBoard
+    private void showLeaderboard() {
+        Page p = createPage("Leaderboard", "Compete with other learners and climb the ranks", false);
+
+// leaderboard rankings
+
+        int myRank = 0;
+        for (int i = 0; i < leaderboard.size(); i++) if (leaderboard.get(i).you) myRank = i + 1;
+        LinearLayout me = new LinearLayout(this);
+        me.setOrientation(LinearLayout.HORIZONTAL);
+        me.setGravity(Gravity.CENTER_VERTICAL);
+        me.setPadding(dp(16), dp(14), dp(16), dp(14));
+        me.setBackground(rounded(WHITE, 18));
+        TextView rankBadge = text(myRank > 0 ? "#" + myRank : "#-", WHITE, 14, true);
+        rankBadge.setGravity(Gravity.CENTER);
+        rankBadge.setBackground(oval(PURPLE));
+        me.addView(rankBadge, new LinearLayout.LayoutParams(dp(44), dp(44)));
+        LinearLayout meInfo = new LinearLayout(this);
+        meInfo.setOrientation(LinearLayout.VERTICAL);
+        meInfo.addView(text(userName.isEmpty() ? "Your ranking" : userName, DEEP_NAVY, 16, true));
+        meInfo.addView(text(String.format(Locale.getDefault(), "%,d XP", userXp), MUTED, 13, false));
+        LinearLayout.LayoutParams meInfoLp = new LinearLayout.LayoutParams(0, -2, 1f);
+        meInfoLp.leftMargin = dp(12);
+        me.addView(meInfo, meInfoLp);
+
+        int streakColor = Color.rgb(176, 38, 197);
+        LinearLayout streak = new LinearLayout(this);
+        streak.setOrientation(LinearLayout.HORIZONTAL);
+        streak.setGravity(Gravity.CENTER_VERTICAL);
+        streak.setPadding(dp(10), dp(6), dp(12), dp(6));
+        streak.setBackground(rounded(Color.rgb(250, 232, 252), 16));
+        streak.addView(iconView("flame", streakColor, 14));
+        TextView streakText = text(streakDays + (streakDays == 1 ? " Day" : " Days"), streakColor, 12, true);
+        streakText.setPadding(dp(4), 0, 0, 0);
+        streak.addView(streakText);
+        me.addView(streak);
+        LinearLayout.LayoutParams meLp = new LinearLayout.LayoutParams(-1, -2);
+        meLp.bottomMargin = dp(14);
+        p.content.addView(me, meLp);
+
+        // Weekly,monthly & all time segmented control
+        LinearLayout seg = new LinearLayout(this);
+        seg.setOrientation(LinearLayout.HORIZONTAL);
+        seg.setPadding(dp(4), dp(4), dp(4), dp(4));
+        seg.setBackground(rounded(Color.rgb(226, 231, 241), 26));
+        for (String option : new String[]{"Weekly", "Monthly", "All Time"}) {
+            boolean sel = selectedPeriod.equals(option);
+            TextView t = text(option, sel ? DEEP_NAVY : MUTED, 14, true);
+            t.setGravity(Gravity.CENTER);
+            if (sel) t.setBackground(rounded(WHITE, 22));
+            seg.addView(t, new LinearLayout.LayoutParams(0, dp(40), 1f));
+            t.setOnClickListener(v -> { selectedPeriod = option; showLeaderboard(); });
+        }
+        LinearLayout.LayoutParams segLp = new LinearLayout.LayoutParams(-1, -2);
+        segLp.bottomMargin = dp(14);
+        p.content.addView(seg, segLp);
+
+        if (leaderboard.isEmpty()) {
+            LinearLayout empty = card(p);
+            addText(empty, "No rankings available", DEEP_NAVY, 17, true);
+            addText(empty, selectedPeriod + " rankings will appear here when leaderboard data is connected.", MUTED, 14, false);
+        } else {
+            for (int i = 0; i < leaderboard.size(); i++) {
+                LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(-1, -2);
+                lp.bottomMargin = dp(10);
+                p.content.addView(leaderRow(i + 1, leaderboard.get(i)), lp);
+            }
+        }
+        showPage(p.root, false);
+    }
+
+    private View leaderRow(int rank, LeaderEntry e) {
+        LinearLayout row = new LinearLayout(this);
+        row.setOrientation(LinearLayout.HORIZONTAL);
+        row.setGravity(Gravity.CENTER_VERTICAL);
+        row.setPadding(dp(14), dp(12), dp(14), dp(12));
+        row.setBackground(rounded(e.you ? Color.rgb(232, 236, 255) : WHITE, 14));
+
+        int badgeBg = Color.TRANSPARENT, badgeFg = MUTED;
+        if (rank == 1) { badgeBg = Color.rgb(255, 243, 214); badgeFg = Color.rgb(214, 150, 20); }
+        else if (rank == 2) { badgeBg = Color.rgb(238, 241, 246); }
+        else if (rank == 3) { badgeBg = Color.rgb(255, 236, 222); badgeFg = Color.rgb(217, 119, 48); }
+        TextView badge = text(String.valueOf(rank), badgeFg, 13, true);
+        badge.setGravity(Gravity.CENTER);
+        badge.setBackground(oval(badgeBg));
+        row.addView(badge, new LinearLayout.LayoutParams(dp(34), dp(34)));
+
+        LinearLayout info = new LinearLayout(this);
+        info.setOrientation(LinearLayout.VERTICAL);
+        info.addView(text(e.name + (e.you ? " (You)" : ""), DEEP_NAVY, 15, true));
+        info.addView(text(String.format(Locale.getDefault(), "%,d XP", e.xp), MUTED, 12, false));
+        LinearLayout.LayoutParams infoLp = new LinearLayout.LayoutParams(0, -2, 1f);
+        infoLp.leftMargin = dp(12);
+        row.addView(info, infoLp);
+
+        String trendIcon = e.trend > 0 ? "up" : e.trend < 0 ? "down" : "dash";
+        int trendColor = e.trend > 0 ? TEAL : e.trend < 0 ? ORANGE : MUTED;
+        row.addView(iconView(trendIcon, trendColor, 18));
+        return row;
+    }
+
+// user profile tab
+    private void showProfile() {
+        Page p = createPage("Profile", "Your account and learning profile", false);
+        LinearLayout c = card(p);
+        addText(c, "Your profile", DEEP_NAVY, 20, true);
+        if (Session.isLoggedIn()) {
+            User user = Session.getUser();
+            addText(c, "Signed in as " + user.fullName, MUTED, 14, false);
+            addText(c, user.email, MUTED, 14, false);
+            addButton(c, "Log out", true, v -> logout());
+        } else {
+            addText(c, "Sign in or create an account to access your learning profile.", MUTED, 14, false);
+            addButton(c, "Log in", false, v -> startActivity(new Intent(this, LoginActivity.class)));
+            addButton(c, "Create account", true, v -> startActivity(new Intent(this, SignupActivity.class)));
+        }
+        LinearLayout admin = card(p);
+        addText(admin, "Administration", DEEP_NAVY, 16, true);
+        addText(admin, "Development preview only. Admin access must be secured by the backend before release.", MUTED, 12, false);
+        addButton(admin, "Open admin panel", true, v ->
+                        startActivity(new Intent(MainActivity.this, AdminPanel.class)));
+        showPage(p.root, false);
+    }
+
+    // Login, register and logout
+
+    private void logout() {
+        authService.logout();
+        loadedUserId = -1;
+        userName = "";
+        userXp = 0;
+        courses.clear();
+        goals.clear();
+        leaderboard.clear();
+        catalogue.clear();
+        showStudentTab("Profile");
+    }
+
+    // Loading data from the backend
+
+    private void loadData() {
+        courseService.getCatalogue(new ApiCallback<List<com.example.momentum.model.Course>>() {
+            @Override public void onSuccess(List<com.example.momentum.model.Course> result) {
+                catalogue.clear();
+                catalogue.addAll(result);
+                // Goals and courses show the course's name, so they load after the catalogue
+                loadGoals();
+                loadCourses();
+            }
+            @Override public void onError(String error) {
+                loadGoals();
+            }
+        });
+        loadLeaderboard();
+    }
+
+    private void loadCourses() {
+        courseService.getMyCourses(new ApiCallback<List<Enrolment>>() {
+            @Override public void onSuccess(List<Enrolment> result) {
+                courses.clear();
+                for (Enrolment enrolment : result) {
+                    com.example.momentum.model.Course info = catalogueCourse(enrolment.courseId);
+                    Course c = new Course();
+                    c.title = info != null ? info.name : "Course";
+                    c.status = "completed".equals(enrolment.state) ? "Completed"
+                            : "in_progress".equals(enrolment.state) ? "In Progress" : "New";
+                    // Points value set by the admin, otherwise the course's minutes
+                    if (info != null && info.pointsValue != null) c.xp = info.pointsValue;
+                    else if (info != null && info.expectedMinutes != null) c.xp = info.expectedMinutes;
+                    c.completedOn = enrolment.completedOn == null ? "" : enrolment.completedOn;
+                    courses.add(c);
+                }
+                if ("main".equals(currentScreen) && ("Home".equals(currentTab) || "Courses".equals(currentTab))) {
+                    showStudentTab(currentTab);
+                }
+            }
+            @Override public void onError(String error) {
+                // The Courses tab shows its empty message
+            }
+        });
+    }
+
+    private com.example.momentum.model.Course catalogueCourse(int courseId) {
+        for (com.example.momentum.model.Course c : catalogue) {
+            if (c.courseId == courseId) return c;
+        }
+        return null;
+    }
+
+    private void loadGoals() {
+        goalService.getGoals(new ApiCallback<List<com.example.momentum.model.Goal>>() {
+            @Override public void onSuccess(List<com.example.momentum.model.Goal> result) {
+                goals.clear();
+                for (com.example.momentum.model.Goal saved : result) {
+                    if ("cancelled".equals(saved.status)) continue;
+                    Goal g = new Goal(saved.id, saved.title);
+                    g.course = courseName(saved.targetCourseId);
+                    g.target = toDisplayDate(saved.targetDate);
+                    g.lastAccessed = toDisplayDate(saved.createdAt);
+                    g.completed = "completed".equals(saved.status);
+                    g.completedDate = toDisplayDate(saved.completedAt);
+                    goals.add(g);
+                }
+                if ("Goals".equals(currentTab) && "main".equals(currentScreen)) showGoals();
+            }
+            @Override public void onError(String error) {
+                Toast.makeText(MainActivity.this, error, Toast.LENGTH_SHORT).show();
+            }
+        });
+    }
+
+    private void loadLeaderboard() {
+        leaderboardService.getLeaderboard(new ApiCallback<List<LeaderboardEntry>>() {
+            @Override public void onSuccess(List<LeaderboardEntry> result) {
+                leaderboard.clear();
+                for (LeaderboardEntry entry : result) {
+                    LeaderEntry e = new LeaderEntry();
+                    e.name = entry.name;
+                    e.xp = entry.points;
+                    e.you = Session.getUser() != null && entry.userId == Session.getUser().id;
+                    if (e.you) userXp = entry.points;
+                    leaderboard.add(e);
+                }
+            }
+            @Override public void onError(String error) {
+                // No leaderboard yet, the screen shows its empty message
+            }
+        });
+    }
+
+    // Finds a course in the catalogue by its name, ignoring capitals. Null if there is none.
+    private Integer findCourseId(String name) {
+        for (com.example.momentum.model.Course c : catalogue) {
+            if (c.name.equalsIgnoreCase(name)) return c.courseId;
+        }
+        return null;
+    }
+
+    private String courseName(Integer courseId) {
+        if (courseId == null) return "";
+        for (com.example.momentum.model.Course c : catalogue) {
+            if (c.courseId == courseId) return c.name;
+        }
+        return "";
+    }
+
+    // "Dec 15" becomes "2026-12-15" for the database. Null if it isn't a date.
+    private String toDatabaseDate(String text) {
+        try {
+            SimpleDateFormat typed = new SimpleDateFormat("MMM d yyyy", Locale.ENGLISH);
+            typed.setLenient(false);
+            String year = new SimpleDateFormat("yyyy", Locale.ENGLISH).format(new Date());
+            Date date = typed.parse(text + " " + year);
+            return new SimpleDateFormat("yyyy-MM-dd", Locale.ENGLISH).format(date);
+        } catch (Exception e) {
+            return null;
+        }
+    }
+
+    // "2026-12-15" or "2026-12-15 10:30:00" from the database becomes "Dec 15".
+    private String toDisplayDate(String value) {
+        if (value == null || value.length() < 10) return "";
+        try {
+            Date date = new SimpleDateFormat("yyyy-MM-dd", Locale.ENGLISH).parse(value.substring(0, 10));
+            return new SimpleDateFormat("MMM d", Locale.getDefault()).format(date);
+        } catch (Exception e) {
+            return "";
+        }
+    }
+
+  //Course details
+    private void showCourseDetails() {
+        showCourseDetails(selectedCourse);
+    }
+
+    private void showCourseDetails(Course c) {
+        currentScreen = "courseDetails";
+        selectedCourse = c;
+        checkTab(TAB_COURSES);
+
+        Page p = createPage(null, null, false);
+        p.content.setPadding(dp(20), p.content.getPaddingTop(), dp(20), dp(100));
+        addBack(p.content, "Back to Courses", v -> showStudentTab("Courses"));
+
+        View hero = new View(this);
+        GradientDrawable heroBg = new GradientDrawable(GradientDrawable.Orientation.TL_BR,
+                new int[]{Color.rgb(14, 78, 100), DEEP_NAVY});
+        heroBg.setCornerRadius(dp(16));
+        hero.setBackground(heroBg);
+        LinearLayout.LayoutParams heroLp = new LinearLayout.LayoutParams(-1, dp(140));
+        heroLp.bottomMargin = dp(14);
+        p.content.addView(hero, heroLp);
+
+        if (c != null && c.rating > 0) {
+            LinearLayout ratingRow = new LinearLayout(this);
+            ratingRow.setOrientation(LinearLayout.HORIZONTAL);
+            ratingRow.setGravity(Gravity.CENTER_VERTICAL);
+            ratingRow.addView(iconView("star", GOLD, 16));
+            String r = String.format(Locale.getDefault(), "%.1f", c.rating)
+                    + (c.enrolled > 0 ? "  \u2022  (" + String.format(Locale.getDefault(), "%,d", c.enrolled) + " learners enrolled)" : "");
+            TextView rt = text(r, WHITE, 13, false);
+            rt.setPadding(dp(6), 0, 0, 0);
+            ratingRow.addView(rt);
+            LinearLayout.LayoutParams rLp = new LinearLayout.LayoutParams(-1, -2);
+            rLp.bottomMargin = dp(6);
+            p.content.addView(ratingRow, rLp);
+        }
+        TextView title = text(c == null ? "Course details" : c.title, WHITE, 24, true);
+        p.content.addView(title, new LinearLayout.LayoutParams(-1, -2));
+        if (c != null && !c.instructor.isEmpty()) {
+            TextView inst = text("Instructor: " + c.instructor, Color.argb(225, 255, 255, 255), 14, false);
+            inst.setPadding(0, dp(4), 0, 0);
+            p.content.addView(inst, new LinearLayout.LayoutParams(-1, -2));
+        }
+
+        // Tabs
+        LinearLayout tabs = new LinearLayout(this);
+        tabs.setOrientation(LinearLayout.HORIZONTAL);
+        for (String name : new String[]{"Overview", "Modules", "Discussion"}) {
+            boolean sel = courseTab.equals(name);
+            LinearLayout tab = new LinearLayout(this);
+            tab.setOrientation(LinearLayout.VERTICAL);
+            TextView label = text(name, sel ? LIGHT_PURPLE : WHITE, 14, true);
+            label.setGravity(Gravity.CENTER);
+            label.setPadding(0, dp(12), 0, dp(10));
+            tab.addView(label, new LinearLayout.LayoutParams(-1, -2));
+            View underline = new View(this);
+            underline.setBackgroundColor(sel ? LIGHT_PURPLE : Color.TRANSPARENT);
+            tab.addView(underline, new LinearLayout.LayoutParams(-1, dp(3)));
+            tab.setOnClickListener(v -> { courseTab = name; showCourseDetails(selectedCourse); });
+            tabs.addView(tab, new LinearLayout.LayoutParams(0, -2, 1f));
+        }
+        LinearLayout.LayoutParams tabsLp = new LinearLayout.LayoutParams(-1, -2);
+        tabsLp.topMargin = dp(16);
+        p.content.addView(tabs, tabsLp);
+        View baseline = new View(this);
+        baseline.setBackgroundColor(Color.argb(70, 255, 255, 255));
+        LinearLayout.LayoutParams baseLp = new LinearLayout.LayoutParams(-1, dp(1));
+        baseLp.bottomMargin = dp(16);
+        p.content.addView(baseline, baseLp);
+
+        int softWhite = Color.argb(225, 255, 255, 255);
+        if ("Modules".equals(courseTab)) {
+            addHeading(p.content, "Modules");
+            if (c == null || c.modules.isEmpty()) {
+                addText(p.content, "Course modules will appear here when data is available.", softWhite, 14, false);
+            } else {
+                for (String module : c.modules) {
+                    TextView row = text(module, WHITE, 14, true);
+                    row.setPadding(dp(16), dp(14), dp(16), dp(14));
+                    row.setBackground(rounded(Color.argb(45, 255, 255, 255), 14));
+                    LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(-1, -2);
+                    lp.bottomMargin = dp(10);
+                    p.content.addView(row, lp);
+                    row.setOnClickListener(v -> showLesson(module));
+                }
+            }
+        } else if ("Discussion".equals(courseTab)) {
+            addHeading(p.content, "Discussion");
+            addText(p.content, "Course discussion will appear here when it is connected.", softWhite, 14, false);
+        } else {
+            addHeading(p.content, "Course Description");
+            addText(p.content, c == null || c.description.isEmpty()
+                    ? "Course information will appear here when course data is connected."
+                    : c.description, softWhite, 14, false);
+            View gap = new View(this);
+            p.content.addView(gap, new LinearLayout.LayoutParams(1, dp(10)));
+            addHeading(p.content, "What You'll Learn");
+            if (c == null || c.outcomes.isEmpty()) {
+                addText(p.content, "Learning outcomes will appear here when data is available.", softWhite, 14, false);
+            } else {
+                for (String outcome : c.outcomes) {
+                    LinearLayout row = new LinearLayout(this);
+                    row.setOrientation(LinearLayout.HORIZONTAL);
+                    ImageView box = iconView("check", WHITE, 22);
+                    box.setBackground(rounded(TEAL, 6));
+                    box.setPadding(dp(3), dp(3), dp(3), dp(3));
+                    row.addView(box, new LinearLayout.LayoutParams(dp(22), dp(22)));
+                    LinearLayout.LayoutParams tLp = new LinearLayout.LayoutParams(0, -2, 1f);
+                    tLp.leftMargin = dp(12);
+                    row.addView(text(outcome, WHITE, 14, false), tLp);
+                    LinearLayout.LayoutParams rowLp = new LinearLayout.LayoutParams(-1, -2);
+                    rowLp.bottomMargin = dp(12);
+                    p.content.addView(row, rowLp);
+                }
+            }
+        }
+
+        // Pinned gradient button
+        TextView cta = text("Continue Learning", WHITE, 16, true);
+        cta.setGravity(Gravity.CENTER);
+        GradientDrawable ctaBg = new GradientDrawable(GradientDrawable.Orientation.LEFT_RIGHT,
+                new int[]{PURPLE, TEAL});
+        ctaBg.setCornerRadius(dp(28));
+        cta.setBackground(ctaBg);
+        FrameLayout.LayoutParams ctaLp = new FrameLayout.LayoutParams(-1, dp(54), Gravity.BOTTOM);
+        ctaLp.setMargins(dp(20), 0, dp(20), dp(20));
+        p.root.addView(cta, ctaLp);
+        cta.setOnClickListener(v -> {
+            if (selectedCourse != null && !selectedCourse.modules.isEmpty()) {
+                showLesson(selectedCourse.modules.get(0));
+            } else {
+                recordStudyStreak();
+            }
+        });
+
+        // A completed course has a certificate
+        if (c != null && "Completed".equals(c.status)) {
+            addButton(p.content, "View certificate", true, v -> {
+                Intent intent = new Intent(MainActivity.this, CertificateActivity.class);
+                intent.putExtra("courseTitle", c.title);
+                intent.putExtra("completedOn", c.completedOn);
+                startActivity(intent);
+            });
+        }
+
+        showPage(p.root, false);
+    }
+
+    // Records today as a study day for the streak and the Momentum Map.
+    private void recordStudyStreak() {
+        if (!Session.isLoggedIn()) {
+            Toast.makeText(this, "Please log in to record your study streak.", Toast.LENGTH_SHORT).show();
+            return;
+        }
+
+        android.content.SharedPreferences preferences =
+                getSharedPreferences("StudyStreakPrefs_" + Session.getUser().id, MODE_PRIVATE);
+
+        String today = new SimpleDateFormat("yyyy-MM-dd", Locale.US).format(new Date());
+        String lastStudyDate = preferences.getString("lastStudyDate", "");
+        int streak = preferences.getInt("studyStreak", 0);
+
+        if (today.equals(lastStudyDate)) {
+            Toast.makeText(this, "Study activity recorded! Your streak is " + streak + " days.",
+                    Toast.LENGTH_SHORT).show();
+            return;
+        }
+
+        java.util.Calendar calendar = java.util.Calendar.getInstance();
+        calendar.add(java.util.Calendar.DAY_OF_YEAR, -1);
+        String yesterday = new SimpleDateFormat("yyyy-MM-dd", Locale.US).format(calendar.getTime());
+
+        if (yesterday.equals(lastStudyDate)) streak++;
+        else streak = 1;
+
+        Set<String> studyDates = new HashSet<>(preferences.getStringSet("studyDates", new HashSet<>()));
+        studyDates.add(today);
+
+        preferences.edit()
+                .putString("lastStudyDate", today)
+                .putInt("studyStreak", streak)
+                .putStringSet("studyDates", studyDates)
+                .apply();
+
+        streakDays = streak;
+        Toast.makeText(this, "Study streak: " + streak + " days!", Toast.LENGTH_LONG).show();
+    }
+
+    private void showLesson(String module) {
+        currentScreen = "lesson";
+        selectedModule = module;
+        Page p = createPage("Lesson", null, false);
+        addBack(p.content, "Back to course", v -> showCourseDetails());
+        LinearLayout c = card(p);
+        addText(c, selectedModule, DEEP_NAVY, 20, true);
+        addText(c, "Lesson content will appear here when course data is connected.", MUTED, 13, false);
+        LinearLayout resources = card(p);
+        addText(resources, "Resources", DEEP_NAVY, 16, true);
+        addText(resources, "No resources available yet.", MUTED, 13, false);
+        addButton(p.content, "Previous lesson", true, v -> message("Previous lesson", "Lesson navigation will be connected to course data."));
+        addButton(p.content, "Next lesson", false, v -> message("Next lesson", "Lesson navigation will be connected to course data."));
+        showPage(p.root, true);
+    }
+
+
+    // ADMIN Placeholder (waiting for backend)
+    private void showAdminDashboard() {
+        currentScreen = "adminDashboard";
+        Page p = createPage("Admin Dashboard", "Manage the LearnTech platform", false);
+        addBack(p.content, "Back to Profile", v -> showStudentTab("Profile"));
+        LinearLayout c = card(p);
+        addText(c, "Welcome, Administrator", DEEP_NAVY, 19, true);
+        addText(c, "Live information will appear when the backend API is connected.", MUTED, 13, false);
+        addButton(c, "System Activity", false, v -> showAdminSection("System Activity"));
+        addButton(c, "Engagement Analytics", true, v -> showAdminSection("Engagement Analytics"));
+        showPage(p.root, true);
+    }
+
+    private void showAdminSection(String title) {
+        currentScreen = "adminSection";
+        Page p = createPage(title, null, false);
+        addBack(p.content, "Back to Admin Dashboard", v -> showAdminDashboard());
+        LinearLayout c = card(p);
+        addText(c, title, DEEP_NAVY, 18, true);
+        addText(c, "Information will appear here when the backend API is connected.", MUTED, 13, false);
+        showPage(p.root, true);
+    }
+
+
+    // Progress ring (Home)
+
+    private static class RingView extends View {
+        private final float progress;
+        private final Paint track = new Paint(Paint.ANTI_ALIAS_FLAG);
+        private final Paint arc = new Paint(Paint.ANTI_ALIAS_FLAG);
+
+        RingView(Context context, float progress) {
+            super(context);
+            this.progress = progress;
+            float density = context.getResources().getDisplayMetrics().density;
+            track.setStyle(Paint.Style.STROKE);
+            track.setStrokeWidth(10 * density);
+            track.setColor(TRACK);
+            arc.setStyle(Paint.Style.STROKE);
+            arc.setStrokeWidth(10 * density);
+            arc.setStrokeCap(Paint.Cap.ROUND);
+        }
+
+        @Override protected void onDraw(Canvas canvas) {
+            float w = getWidth(), h = getHeight();
+            float half = track.getStrokeWidth() / 2f;
+            RectF r = new RectF(half, half, w - half, h - half);
+            canvas.drawArc(r, 0, 360, false, track);
+            if (progress > 0f) {
+                arc.setShader(new SweepGradient(w / 2f, h / 2f, new int[]{TEAL, PURPLE, TEAL}, null));
+                canvas.save();
+                canvas.rotate(-90, w / 2f, h / 2f);
+                canvas.drawArc(r, 0, 360f * progress, false, arc);
+                canvas.restore();
+            }
+        }
+    }
+
+    // Outline icons drawn in code
+
+    private static class Icon extends Drawable {
+        private final String type;
+        private final int fixedColor;
+        private int tint = MUTED;
+        private int alpha = 255;
+        private final Paint stroke = new Paint(Paint.ANTI_ALIAS_FLAG);
+        private final Paint fill = new Paint(Paint.ANTI_ALIAS_FLAG);
+
+        Icon(String type, int fixedColor) {
+            this.type = type;
+            this.fixedColor = fixedColor;
+            if (fixedColor != 0) tint = fixedColor;
+            stroke.setStyle(Paint.Style.STROKE);
+            stroke.setStrokeWidth(2f);
+            stroke.setStrokeCap(Paint.Cap.ROUND);
+            stroke.setStrokeJoin(Paint.Join.ROUND);
+            fill.setStyle(Paint.Style.FILL);
+        }
+
+        @Override public void setTintList(ColorStateList list) { /* colours are handled internally */ }
+        @Override public boolean isStateful() { return fixedColor == 0; }
+        @Override protected boolean onStateChange(int[] state) {
+            if (fixedColor != 0) return false;
+            int c = MUTED;
+            for (int s : state) {
+                if (s == android.R.attr.state_checked || s == android.R.attr.state_selected) c = PURPLE;
+            }
+            boolean changed = c != tint;
+            tint = c;
+            if (changed) invalidateSelf();
+            return changed;
+        }
+
+        private Path poly(float... xy) {
+            Path path = new Path();
+            path.moveTo(xy[0], xy[1]);
+            for (int i = 2; i < xy.length; i += 2) path.lineTo(xy[i], xy[i + 1]);
+            path.close();
+            return path;
+        }
+
+        @Override public void draw(Canvas canvas) {
+            Rect b = getBounds();
+            if (b.isEmpty()) return;
+            canvas.save();
+            canvas.translate(b.left, b.top);
+            canvas.scale(b.width() / 24f, b.height() / 24f);
+            stroke.setColor(tint);
+            fill.setColor(tint);
+            stroke.setAlpha(alpha);
+            fill.setAlpha(alpha);
+            Path p = new Path();
+            switch (type) {
+                case "home":
+                    p.moveTo(3, 11); p.lineTo(12, 3); p.lineTo(21, 11);
+                    canvas.drawPath(p, stroke);
+                    p.reset(); p.moveTo(5, 9.5f); p.lineTo(5, 21); p.lineTo(19, 21); p.lineTo(19, 9.5f);
+                    canvas.drawPath(p, stroke);
+                    p.reset(); p.moveTo(10, 21); p.lineTo(10, 14); p.lineTo(14, 14); p.lineTo(14, 21);
+                    canvas.drawPath(p, stroke);
+                    break;
+                case "book":
+                    canvas.drawRoundRect(5, 3, 19, 21, 2.5f, 2.5f, stroke);
+                    canvas.drawLine(5, 17, 19, 17, stroke);
+                    canvas.drawLine(9, 7, 15, 7, stroke);
+                    break;
+                case "target":
+                    canvas.drawCircle(12, 12, 9, stroke);
+                    canvas.drawCircle(12, 12, 5.5f, stroke);
+                    canvas.drawCircle(12, 12, 2f, fill);
+                    break;
+                case "trophy":
+                    p.moveTo(7, 4); p.lineTo(17, 4); p.lineTo(17, 10);
+                    p.quadTo(17, 15, 12, 15); p.quadTo(7, 15, 7, 10); p.close();
+                    canvas.drawPath(p, stroke);
+                    p.reset(); p.moveTo(7, 6); p.lineTo(4, 6); p.quadTo(4, 11, 7, 11);
+                    canvas.drawPath(p, stroke);
+                    p.reset(); p.moveTo(17, 6); p.lineTo(20, 6); p.quadTo(20, 11, 17, 11);
+                    canvas.drawPath(p, stroke);
+                    canvas.drawLine(12, 15, 12, 19, stroke);
+                    canvas.drawLine(8, 20.5f, 16, 20.5f, stroke);
+                    break;
+                case "person":
+                    canvas.drawCircle(12, 8, 4, stroke);
+                    p.moveTo(4, 21); p.quadTo(4, 14, 12, 14); p.quadTo(20, 14, 20, 21);
+                    canvas.drawPath(p, stroke);
+                    break;
+                case "hex":
+                    canvas.drawPath(poly(12, 2, 21, 7, 21, 17, 12, 22, 3, 17, 3, 7), stroke);
+                    canvas.drawPath(poly(12, 7, 16.5f, 9.5f, 16.5f, 14.5f, 12, 17, 7.5f, 14.5f, 7.5f, 9.5f), stroke);
+                    break;
+                case "check":
+                    p.moveTo(6, 12.5f); p.lineTo(10.5f, 17); p.lineTo(18, 8);
+                    canvas.drawPath(p, stroke);
+                    break;
+                case "search":
+                    canvas.drawCircle(10.5f, 10.5f, 6.5f, stroke);
+                    canvas.drawLine(15.5f, 15.5f, 21, 21, stroke);
+                    break;
+                case "plus":
+                    canvas.drawLine(12, 5, 12, 19, stroke);
+                    canvas.drawLine(5, 12, 19, 12, stroke);
+                    break;
+                case "star":
+                    canvas.drawPath(poly(12, 2, 14.9f, 8.5f, 22, 9.2f, 16.8f, 14, 18.2f, 21,
+                            12, 17.4f, 5.8f, 21, 7.2f, 14, 2, 9.2f, 9.1f, 8.5f), fill);
+                    break;
+                case "flame":
+                    p.moveTo(12, 3);
+                    p.cubicTo(12, 8, 17, 10, 17, 15);
+                    p.cubicTo(17, 18.5f, 14.8f, 21, 12, 21);
+                    p.cubicTo(9.2f, 21, 7, 18.5f, 7, 15);
+                    p.cubicTo(7, 12.5f, 8.5f, 11, 9.5f, 9.5f);
+                    p.cubicTo(10.5f, 11, 11, 11.5f, 12, 12);
+                    p.cubicTo(12.5f, 9, 12, 6, 12, 3);
+                    p.close();
+                    canvas.drawPath(p, fill);
+                    break;
+                case "up":
+                    canvas.drawLine(12, 19, 12, 6, stroke);
+                    p.moveTo(6, 12); p.lineTo(12, 6); p.lineTo(18, 12);
+                    canvas.drawPath(p, stroke);
+                    break;
+                case "down":
+                    canvas.drawLine(12, 5, 12, 18, stroke);
+                    p.moveTo(6, 12); p.lineTo(12, 18); p.lineTo(18, 12);
+                    canvas.drawPath(p, stroke);
+                    break;
+                case "dash":
+                    canvas.drawLine(7, 12, 17, 12, stroke);
+                    break;
+            }
+            canvas.restore();
+        }
+
+        @Override public void setAlpha(int a) { alpha = a; invalidateSelf(); }
+        @Override public void setColorFilter(android.graphics.ColorFilter filter) {
+            stroke.setColorFilter(filter);
+            fill.setColorFilter(filter);
+            invalidateSelf();
+        }
+        @Override public int getOpacity() { return android.graphics.PixelFormat.TRANSLUCENT; }
     }
 }

@@ -15,23 +15,24 @@ Built as a native Android app in Java, with a Java backend and a MySQL database.
 
 ## How the app code is organised
 
-The app currently runs on temporary screens, so we can work on the features before the real frontend is added.
+The app now uses the real frontend and talks to the real backend. Log in, create account, goals and the admin user list and system activity all save to and load from the database.
 
-**Important: everything the app shows right now is fake.** Courses, points, streaks and the leaderboard are hardcoded. Accounts, goals and check-ins you add only exist until the app closes. Nothing is saved to the database yet. It looks finished, but almost none of the features actually work yet.
+**Important: the backend has to be running for the app to work.** Until it is hosted online, that means running it on your own laptop and using the emulator. If it is not running, the app shows "Can't reach the server".
 
 | Folder in `app-android` | What it is |
 |---|---|
-| `placeholder` | Temporary screens. These get replaced by the real frontend |
-| `service` | The features. This is where most of our code goes, and it stays when the screens are replaced |
-| `data` | Talks to the backend. For now it uses fake sample data, so the app runs on the emulator without the backend |
+| `MainActivity.java` | The main learner screens: home, courses, goals, leaderboard and profile |
+| `activities` | The extra screens: login, sign up, achievements, momentum map, certificate, reminders, study coach, momentum coach and study timetable |
+| `admin` | The admin screens: dashboard, users, courses, modules, system activity and analytics |
+| `service` | The features the screens use, like logging in or saving a goal |
+| `data` | Talks to the backend over the internet |
 | `model` | Simple classes for users, courses, goals and so on |
 
-Keep your feature code in `service`, not inside the screens, so nothing is lost when the real frontend arrives. Look for the `TODO` comments to see what still needs to be done.
+Screens that still show "will appear when data is connected" are waiting on a part of the backend that is not built yet, like the leaderboard and the learner's own courses.
 
-Test accounts while the fake data is in use:
+If you set up the database before the study timetable was added, run `backend/database/03_study_sessions.sql` once in MySQL Workbench. It adds the new table without deleting anything.
 
-- Learner: `thandi@test.com` / `password123`
-- Admin: `admin@test.com` / `admin123`
+To test, create an account in the app. To test the admin side, someone with database access has to change that account's role to `administrator`.
 
 ## Video tutorial for GitHub Desktop
 

@@ -12,6 +12,7 @@ USE momentum;
 
 -- Drop in reverse order of dependency, children before parents,
 -- otherwise the foreign keys block the drop.
+DROP TABLE IF EXISTS StudySessions;
 DROP TABLE IF EXISTS PlatformConfig;
 DROP TABLE IF EXISTS ActivityLogs;
 DROP TABLE IF EXISTS ProgressSnapshots;
@@ -271,4 +272,22 @@ CREATE TABLE PlatformConfig (
     PRIMARY KEY (config_id),
     CONSTRAINT chk_config_single_row CHECK (config_id = 1),
     CONSTRAINT fk_config_user FOREIGN KEY (updated_by) REFERENCES Users(user_id) ON DELETE SET NULL
+) ENGINE=InnoDB;
+
+-- ------------------------------------------------------------
+-- StudySessions
+-- A learner's weekly study timetable: which day, what time,
+-- which course and what they plan to do.
+-- ------------------------------------------------------------
+CREATE TABLE StudySessions (
+    session_id           INT           NOT NULL AUTO_INCREMENT,
+    user_id              INT           NOT NULL,
+    day                  VARCHAR(10)   NOT NULL,   -- Monday to Sunday
+    time                 VARCHAR(30)   NOT NULL,   -- as typed, e.g. 18:00 - 19:00
+    course               VARCHAR(255)  NOT NULL,
+    task                 VARCHAR(255)  NOT NULL,
+    created_at           DATETIME      NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (session_id),
+    KEY idx_sessions_user (user_id),
+    CONSTRAINT fk_sessions_user FOREIGN KEY (user_id) REFERENCES Users(user_id) ON DELETE CASCADE
 ) ENGINE=InnoDB;
