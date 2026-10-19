@@ -6,6 +6,7 @@ import com.momentum.backend.db.BadgeRepository;
 import com.momentum.backend.db.CourseRepository;
 import com.momentum.backend.db.StatsRepository;
 import com.momentum.backend.db.UserRepository;
+import com.momentum.backend.model.AdminUserRequest;
 import com.momentum.backend.model.Badge;
 import com.momentum.backend.model.BadgeRequest;
 import com.momentum.backend.model.Course;
@@ -14,6 +15,7 @@ import com.momentum.backend.model.LinkRequest;
 import com.momentum.backend.model.StatusRequest;
 import com.momentum.backend.model.User;
 import io.javalin.http.Context;
+import org.mindrot.jbcrypt.BCrypt;
 
 import java.sql.SQLException;
 import java.util.List;
@@ -22,6 +24,10 @@ import java.util.Map;
 // Handles the administrator's screens: users, courses and badges.
 // Every method first checks the person is logged in and is an administrator.
 public class AdminController {
+
+    // The rules a badge can be earned by. rule_value is the number to reach.
+    private static final List<String> BADGE_RULES = List.of(
+        "courses_completed", "streak_days", "total_points");
 
     private final UserRepository userRepository;
     private final CourseRepository courseRepository;
@@ -42,6 +48,132 @@ public class AdminController {
     // =====================================================
     // Users
     // =====================================================
+
+    // -----------------------------------------------------
+    // POST /admin/users   create an account
+    // Same checks as register, plus the role.
+    // -----------------------------------------------------
+    public void createUser(Context ctx) {
+
+        if (!requireAdmin(ctx)) {
+            return;
+        }
+
+        AdminUserRequest request;
+        try {
+            request = ctx.bodyAsClass(AdminUserRequest.class);
+        } catch (Exception e) {
+            ctx.status(400).json(Map.of("error", "invalid request"));
+            return;
+        }
+
+        if (request.email == null || request.email.isBlank()) {
+            ctx.status(400).json(Map.of("error", "email is required"));
+            return;
+        }
+        if (request.password == null || request.password.isBlank()) {
+            ctx.status(400).json(Map.of("error", "password is required"));
+            return;
+        }
+        if (request.fullName == null || request.fullName.isBlank()) {
+            ctx.status(400).json(Map.of("error", "full name is required"));
+            return;
+        }
+        if (!request.email.contains("@")) {
+            ctx.status(400).json(Map.of("error", "email is not valid"));
+            return;
+        }
+        if (request.password.length() < 8) {
+            ctx.status(400).json(Map.of("error", "password must be at least 8 characters"));
+            return;
+        }
+        if (request.password.length() > 72) {
+            ctx.status(400).json(Map.of("error", "password can be at most 72 characters"));
+            return;
+        }
+
+        // Role is learner unless the admin picks administrator.
+        if (request.role == null) {
+            request.role = "learner";
+        }
+        if (!List.of("learner", "administrator").contains(request.role)) {
+            ctx.status(400).json(Map.of("error", "role must be learner or administrator"));
+            return;
+        }
+
+        try {
+            if (userRepository.emailExists(request.email)) {
+                ctx.status(409).json(Map.of("error", "email already registered"));
+                return;
+            }
+
+            String passwordHash = BCrypt.hashpw(request.password, BCrypt.gensalt());
+            boolean saved = userRepository.insertUser(request.email, passwordHash, request.fullName);
+            if (!saved) {
+                ctx.status(500).json(Map.of("error", "could not create user"));
+                return;
+            }
+
+            // New accounts start as learners, so set the role the admin picked.
+            User newUser = userRepository.findUserByEmail(request.email);
+            userRepository.updateUserDetails(newUser.userId, request.fullName, request.role);
+
+            activityLogRepository.log(CurrentUser.id(ctx), "user " + newUser.userId + " created", "info");
+            ctx.status(201).json(Map.of("message", "user created"));
+        } catch (SQLException e) {
+            ctx.status(500).json(Map.of("error", "something went wrong, try again"));
+        }
+    }
+
+    // -----------------------------------------------------
+    // PUT /admin/users/{id}   change name and role
+    // -----------------------------------------------------
+    public void updateUser(Context ctx) {
+
+        if (!requireAdmin(ctx)) {
+            return;
+        }
+
+        Integer userId = readId(ctx);
+        if (userId == null) {
+            return;
+        }
+
+        AdminUserRequest request;
+        try {
+            request = ctx.bodyAsClass(AdminUserRequest.class);
+        } catch (Exception e) {
+            ctx.status(400).json(Map.of("error", "invalid request"));
+            return;
+        }
+
+        if (request.fullName == null || request.fullName.isBlank()) {
+            ctx.status(400).json(Map.of("error", "full name is required"));
+            return;
+        }
+        if (request.role == null || !List.of("learner", "administrator").contains(request.role)) {
+            ctx.status(400).json(Map.of("error", "role must be learner or administrator"));
+            return;
+        }
+
+        // An admin can't remove their own admin role by accident.
+        if (userId.equals(CurrentUser.id(ctx)) && !request.role.equals("administrator")) {
+            ctx.status(400).json(Map.of("error", "you can't change your own role"));
+            return;
+        }
+
+        try {
+            boolean saved = userRepository.updateUserDetails(userId, request.fullName, request.role);
+            if (saved) {
+                activityLogRepository.log(CurrentUser.id(ctx), "user " + userId + " updated", "info");
+                ctx.json(Map.of("message", "user updated"));
+            } else {
+                ctx.status(404).json(Map.of("error", "user not found"));
+            }
+        } catch (SQLException e) {
+            ctx.status(500).json(Map.of("error", "something went wrong, try again"));
+        }
+    }
 
     // -----------------------------------------------------
     // PUT /admin/users/{id}/status   suspend or reactivate
@@ -79,6 +211,7 @@ public class AdminController {
         try {
             boolean saved = userRepository.updateStatus(userId, request.status);
             if (saved) {
+                activityLogRepository.log(CurrentUser.id(ctx), "user " + userId + " " + request.status, "info");
                 ctx.json(Map.of("message", "user " + request.status));
             } else {
                 ctx.status(404).json(Map.of("error", "user not found"));
@@ -119,6 +252,9 @@ public class AdminController {
 
             boolean saved = userRepository.updateIdst(userId, request.idst);
             if (saved) {
+                activityLogRepository.log(CurrentUser.id(ctx), request.idst == null
+                        ? "user " + userId + " unlinked"
+                        : "user " + userId + " linked to learner " + request.idst, "info");
                 ctx.json(Map.of("message", request.idst == null ? "user unlinked" : "user linked"));
             } else {
                 ctx.status(404).json(Map.of("error", "user not found"));
@@ -150,6 +286,7 @@ public class AdminController {
         try {
             boolean deleted = userRepository.deleteUser(userId);
             if (deleted) {
+                activityLogRepository.log(CurrentUser.id(ctx), "user " + userId + " deleted", "info");
                 ctx.json(Map.of("message", "user deleted"));
             } else {
                 ctx.status(404).json(Map.of("error", "user not found"));
@@ -304,6 +441,7 @@ public class AdminController {
                 return;
             }
             courseRepository.updateExpectedMinutes(courseId, request.expectedMinutes);
+            activityLogRepository.log(CurrentUser.id(ctx), "course " + courseId + " updated", "info");
             ctx.json(Map.of("message", "course updated"));
         } catch (SQLException e) {
             ctx.status(500).json(Map.of("error", "something went wrong, try again"));
@@ -340,6 +478,7 @@ public class AdminController {
         try {
             boolean saved = badgeRepository.insertBadge(request);
             if (saved) {
+                activityLogRepository.log(CurrentUser.id(ctx), "badge created: " + request.name, "info");
                 ctx.status(201).json(Map.of("message", "badge created"));
             } else {
                 ctx.status(500).json(Map.of("error", "could not create badge"));
@@ -438,6 +577,7 @@ public class AdminController {
         try {
             boolean saved = badgeRepository.updateBadge(badgeId, request);
             if (saved) {
+                activityLogRepository.log(CurrentUser.id(ctx), "badge " + badgeId + " updated", "info");
                 ctx.json(Map.of("message", "badge updated"));
             } else {
                 ctx.status(404).json(Map.of("error", "badge not found"));
@@ -464,6 +604,7 @@ public class AdminController {
         try {
             boolean deleted = badgeRepository.deleteBadge(badgeId);
             if (deleted) {
+                activityLogRepository.log(CurrentUser.id(ctx), "badge " + badgeId + " deleted", "info");
                 ctx.json(Map.of("message", "badge deleted"));
             } else {
                 ctx.status(404).json(Map.of("error", "badge not found"));
@@ -496,6 +637,9 @@ public class AdminController {
     private String checkBadge(BadgeRequest request) {
         if (request.name == null || request.name.isBlank()) {
             return "badge name is required";
+        }
+        if (request.ruleType == null || !BADGE_RULES.contains(request.ruleType)) {
+            return "rule must be courses_completed, streak_days or total_points";
         }
         if (request.ruleValue == null) {
             request.ruleValue = 0;

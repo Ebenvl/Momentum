@@ -22,6 +22,11 @@ public class ActivityLogRepository {
     // level is "info", "warning" or "error".
     public boolean log(Integer userId, String action, String level) throws SQLException {
 
+        // The action column holds at most 100 characters, so longer text is cut short.
+        if (action.length() > 100) {
+            action = action.substring(0, 100);
+        }
+
         String sql = "INSERT INTO ActivityLogs (user_id, action, level) VALUES (?, ?, ?)";
 
         try (Connection connection = database.getConnection();

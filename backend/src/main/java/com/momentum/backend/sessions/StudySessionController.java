@@ -1,6 +1,7 @@
 package com.momentum.backend.sessions;
 
 import com.momentum.backend.auth.CurrentUser;
+import com.momentum.backend.db.CourseRepository;
 import com.momentum.backend.db.StudySessionRepository;
 import com.momentum.backend.model.StudySessionRequest;
 import io.javalin.http.Context;
@@ -16,9 +17,12 @@ public class StudySessionController {
         "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday");
 
     private final StudySessionRepository studySessionRepository;
+    private final CourseRepository courseRepository;
 
-    public StudySessionController(StudySessionRepository studySessionRepository) {
+    public StudySessionController(StudySessionRepository studySessionRepository,
+                                  CourseRepository courseRepository) {
         this.studySessionRepository = studySessionRepository;
+        this.courseRepository = courseRepository;
     }
 
     // -----------------------------------------------------
@@ -65,6 +69,12 @@ public class StudySessionController {
         }
 
         try {
+            // The course typed in has to exist in our catalogue.
+            if (courseRepository.findCourseByName(request.course.trim()) == null) {
+                ctx.status(400).json(Map.of("error", "that course doesn't exist"));
+                return;
+            }
+
             boolean saved = studySessionRepository.insertSession(userId, request);
             if (saved) {
                 ctx.status(201).json(Map.of("message", "session added"));
@@ -107,6 +117,12 @@ public class StudySessionController {
         }
 
         try {
+            // The course typed in has to exist in our catalogue.
+            if (courseRepository.findCourseByName(request.course.trim()) == null) {
+                ctx.status(400).json(Map.of("error", "that course doesn't exist"));
+                return;
+            }
+
             boolean saved = studySessionRepository.updateSession(sessionId, userId, request);
             if (saved) {
                 ctx.json(Map.of("message", "session updated"));

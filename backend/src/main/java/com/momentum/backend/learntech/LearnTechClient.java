@@ -23,16 +23,15 @@ import java.time.Duration;
 // be built and tested before the real API address is confirmed.
 public class LearnTechClient {
 
-    private final String baseUrl;
-    private final String apiKey;
+    // Not final, because the admin can change them from the settings screen.
+    // volatile: a change made by one request is seen straight away by the sync.
+    private volatile String baseUrl;
+    private volatile String apiKey;
     private final HttpClient http;
     private final ObjectMapper json;
 
     public LearnTechClient(Config config) {
-        // Drops a "/" at the end, so ".../v1/" + "/courses" doesn't become "v1//courses".
-        String url = config.get("learntech.base_url");
-        this.baseUrl = url.endsWith("/") ? url.substring(0, url.length() - 1) : url;
-        this.apiKey = config.get("learntech.api_key");
+        useSettings(config.get("learntech.base_url"), config.get("learntech.api_key"));
 
         // Gives up after 15 seconds instead of hanging if LearnTech is slow or down.
         this.http = HttpClient.newBuilder()
@@ -46,6 +45,22 @@ public class LearnTechClient {
         this.json = new ObjectMapper()
                 .setPropertyNamingStrategy(PropertyNamingStrategies.SNAKE_CASE)
                 .configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
+    }
+
+    // Switches to a different address and key. Used at startup (config.properties,
+    // or the admin's saved settings) and when the admin saves new settings.
+    public void useSettings(String url, String key) {
+        // Drops a "/" at the end, so ".../v1/" + "/courses" doesn't become "v1//courses".
+        this.baseUrl = url.endsWith("/") ? url.substring(0, url.length() - 1) : url;
+        this.apiKey = key;
+    }
+
+    public String getBaseUrl() {
+        return baseUrl;
+    }
+
+    public String getApiKey() {
+        return apiKey;
     }
 
     // GET /learners: every learner with their courses (for the scheduled sync).

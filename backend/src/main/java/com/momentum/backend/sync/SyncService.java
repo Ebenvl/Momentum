@@ -1,9 +1,11 @@
 package com.momentum.backend.sync;
 
+import com.momentum.backend.db.ActivityLogRepository;
 import com.momentum.backend.db.CourseRepository;
 import com.momentum.backend.db.EnrolmentRepository;
 import com.momentum.backend.db.PointsRepository;
 import com.momentum.backend.db.SnapshotRepository;
+import com.momentum.backend.db.StreakRepository;
 import com.momentum.backend.db.UserRepository;
 import com.momentum.backend.learntech.ApiCourse;
 import com.momentum.backend.learntech.ApiEnrolment;
@@ -14,9 +16,12 @@ import com.momentum.backend.learntech.LearnTechException;
 import com.momentum.backend.learntech.LearnersResponse;
 import com.momentum.backend.model.Course;
 import com.momentum.backend.model.User;
+import com.momentum.backend.rewards.BadgeService;
 
 import java.sql.SQLException;
 import java.time.YearMonth;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 import java.util.concurrent.ThreadLocalRandom;
 
 // Copies data from LearnTech into our own database.
@@ -31,16 +36,32 @@ public class SyncService {
     private final EnrolmentRepository enrolmentRepository;
     private final SnapshotRepository snapshotRepository;
     private final PointsRepository pointsRepository;
+    private final ActivityLogRepository activityLogRepository;
+    private final StreakRepository streakRepository;
+    private final BadgeService badgeService;
+
+    // One background thread for login syncs. Daemon means it doesn't keep
+    // the backend running after Ctrl+C.
+    private final ExecutorService background = Executors.newSingleThreadExecutor(task -> {
+        Thread thread = new Thread(task);
+        thread.setDaemon(true);
+        return thread;
+    });
 
     public SyncService(LearnTechClient learnTechClient, CourseRepository courseRepository,
                        UserRepository userRepository, EnrolmentRepository enrolmentRepository,
-                       SnapshotRepository snapshotRepository, PointsRepository pointsRepository) {
+                       SnapshotRepository snapshotRepository, PointsRepository pointsRepository,
+                       ActivityLogRepository activityLogRepository, StreakRepository streakRepository,
+                       BadgeService badgeService) {
         this.learnTechClient = learnTechClient;
         this.courseRepository = courseRepository;
         this.userRepository = userRepository;
         this.enrolmentRepository = enrolmentRepository;
         this.snapshotRepository = snapshotRepository;
         this.pointsRepository = pointsRepository;
+        this.activityLogRepository = activityLogRepository;
+        this.streakRepository = streakRepository;
+        this.badgeService = badgeService;
     }
 
     // Saves LearnTech's whole course catalogue into the Courses table.
@@ -69,68 +90,128 @@ public class SyncService {
         int linked = 0;
 
         for (ApiLearner learner : response.learners) {
-
-            User user = userRepository.findUserByEmail(learner.email);
-            if (user == null) {
-                continue;   // no app account with this email, skip to the next learner
+            if (syncLearner(learner)) {
+                linked++;
             }
-
-            // Link the account the first time we see a match.
-            if (user.idst == null) {
-                if (userRepository.idstTaken(learner.idst)) {
-                    continue;   // this learner is already linked to a different account
-                }
-                userRepository.updateIdst(user.userId, learner.idst);
-            }
-
-            for (ApiEnrolment enrolment : learner.courses) {
-
-                // Our own id for this course. If the course isn't in our catalogue yet, add it first.
-                Course course = courseRepository.findCourseByPlatformId(enrolment.courseId);
-                if (course == null) {
-                    courseRepository.saveCourse(enrolment.courseId, enrolment.courseName, enrolment.expectedMinutes);
-                    course = courseRepository.findCourseByPlatformId(enrolment.courseId);
-                }
-
-                // The assessment can be null, so only read inside it if it's there.
-                String assessmentStatus = null;
-                Double score = null;
-                Double scoreMax = null;
-                if (enrolment.assessment != null) {
-                    assessmentStatus = enrolment.assessment.status;
-                    score = enrolment.assessment.score;
-                    scoreMax = enrolment.assessment.scoreMax;
-                }
-
-                enrolmentRepository.saveEnrolment(user.userId, course.courseId, enrolment.state,
-                        enrolment.timeSpentMinutes, assessmentStatus, score, scoreMax,
-                        enrolment.firstAccess, enrolment.dateCompleted);
-
-                // Completed courses earn points. The points table only allows
-                // one award per course per learner, so a re-sync never doubles it.
-                if ("completed".equals(enrolment.state)) {
-                    String monthKey = enrolment.dateCompleted != null
-                            ? enrolment.dateCompleted.substring(0, 7)
-                            : YearMonth.now().toString();
-                    pointsRepository.awardPoints(user.userId, pointsFor(course),
-                            "course_completed", course.courseId, monthKey);
-                }
-            }
-
-            // Records where the learner stands right now. LearnTech keeps no
-            // history, so this is the only history there will be.
-            // Points and streak are 0 until those parts are built.
-            snapshotRepository.insertSnapshot(user.userId,
-                    learner.summary.coursesEnrolled,
-                    learner.summary.coursesCompleted,
-                    learner.summary.totalTimeMinutes,
-                    0,
-                    0);
-
-            linked++;
         }
 
         return linked;
+    }
+
+    // Syncs courses and then every learner, and writes the result to the activity log.
+    // Used at startup and by the schedule in App.java. Never throws, so a failed
+    // sync can't stop the schedule.
+    // synchronized: only one sync can run at a time.
+    public synchronized void syncAll() {
+        try {
+            int courses = syncCourses();
+            int learners = syncLearners();
+            System.out.println("Synced " + courses + " courses and " + learners + " linked learners");
+            activityLogRepository.log(null, "sync: " + courses + " courses, " + learners + " learners", "info");
+        } catch (Exception e) {
+            System.out.println("Sync failed: " + e.getMessage());
+            try {
+                activityLogRepository.log(null, "sync_failed: " + e.getMessage(), "error");
+            } catch (Exception logError) {
+                System.out.println("Could not write to the activity log either: " + logError.getMessage());
+            }
+        }
+    }
+
+    // Runs syncUser in the background, so logging in doesn't wait on LearnTech.
+    public void syncUserInBackground(User user) {
+        background.execute(() -> syncUser(user));
+    }
+
+    // Syncs one user when they log in, so their courses and points are up to date.
+    // A linked user is fetched by their idst. An unlinked user is looked for by
+    // email in the full list, so someone who just registered gets linked straight away.
+    public synchronized void syncUser(User user) {
+        try {
+            LearnersResponse response = user.idst != null
+                    ? learnTechClient.getLearner(user.idst)
+                    : learnTechClient.getAllLearners();
+
+            for (ApiLearner learner : response.learners) {
+                if (learner.email != null && learner.email.equalsIgnoreCase(user.email)) {
+                    syncLearner(learner);
+                }
+            }
+        } catch (Exception e) {
+            System.out.println("Login sync failed: " + e.getMessage());
+            try {
+                activityLogRepository.log(user.userId, "login sync_failed: " + e.getMessage(), "warning");
+            } catch (Exception logError) {
+                System.out.println("Could not write to the activity log either: " + logError.getMessage());
+            }
+        }
+    }
+
+    // Saves one LearnTech learner: links them to the app account with the same
+    // email, saves their courses, awards points and records a snapshot.
+    // Gives back false if they were skipped (no account, or already linked elsewhere).
+    private boolean syncLearner(ApiLearner learner) throws SQLException {
+
+        User user = userRepository.findUserByEmail(learner.email);
+        if (user == null) {
+            return false;   // no app account with this email
+        }
+
+        // Link the account the first time we see a match.
+        if (user.idst == null) {
+            if (userRepository.idstTaken(learner.idst)) {
+                return false;   // this learner is already linked to a different account
+            }
+            userRepository.updateIdst(user.userId, learner.idst);
+        }
+
+        for (ApiEnrolment enrolment : learner.courses) {
+
+            // Our own id for this course. If the course isn't in our catalogue yet, add it first.
+            Course course = courseRepository.findCourseByPlatformId(enrolment.courseId);
+            if (course == null) {
+                courseRepository.saveCourse(enrolment.courseId, enrolment.courseName, enrolment.expectedMinutes);
+                course = courseRepository.findCourseByPlatformId(enrolment.courseId);
+            }
+
+            // The assessment can be null, so only read inside it if it's there.
+            String assessmentStatus = null;
+            Double score = null;
+            Double scoreMax = null;
+            if (enrolment.assessment != null) {
+                assessmentStatus = enrolment.assessment.status;
+                score = enrolment.assessment.score;
+                scoreMax = enrolment.assessment.scoreMax;
+            }
+
+            enrolmentRepository.saveEnrolment(user.userId, course.courseId, enrolment.state,
+                    enrolment.timeSpentMinutes, assessmentStatus, score, scoreMax,
+                    enrolment.firstAccess, enrolment.dateCompleted);
+
+            // Completed courses earn points. The points table only allows
+            // one award per course per learner, so a re-sync never doubles it.
+            if ("completed".equals(enrolment.state)) {
+                String monthKey = enrolment.dateCompleted != null
+                        ? enrolment.dateCompleted.substring(0, 7)
+                        : YearMonth.now().toString();
+                pointsRepository.awardPoints(user.userId, pointsFor(course),
+                        "course_completed", course.courseId, monthKey);
+            }
+        }
+
+        // Any badges reached by these courses. Before the snapshot, so badge points are in it.
+        badgeService.checkBadges(user.userId);
+
+        // Records where the learner stands right now. LearnTech keeps no
+        // history, so this is the only history there will be.
+        snapshotRepository.insertSnapshot(user.userId,
+                learner.summary.coursesEnrolled,
+                learner.summary.coursesCompleted,
+                learner.summary.totalTimeMinutes,
+                pointsRepository.totalPoints(user.userId),
+                streakRepository.activeStreak(user.userId));
+
+        return true;
     }
 
     // How many points a completed course is worth.

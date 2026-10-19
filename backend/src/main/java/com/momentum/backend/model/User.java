@@ -12,5 +12,8 @@ public class User {
     public String status;
     public String lastLoginAt;   // null if they never logged in
     public Integer courseCount;  // only filled in for the admin's user list
+    public Integer totalPoints;  // only filled in for the learner's own profile
+    public Integer currentStreak;  // only filled in for the learner's own profile
+    public Integer longestStreak;  // only filled in for the learner's own profile
 
 }

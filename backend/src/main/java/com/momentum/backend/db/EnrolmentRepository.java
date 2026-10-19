@@ -54,6 +54,23 @@ public class EnrolmentRepository {
         }
     }
 
+    // How many courses the learner has completed, for badge rules.
+    public int countCompleted(int userId) throws SQLException {
+
+        String sql = "SELECT COUNT(*) FROM Enrolments WHERE user_id = ? AND state = 'completed'";
+
+        try (Connection connection = database.getConnection();
+             PreparedStatement statement = connection.prepareStatement(sql)) {
+
+            statement.setInt(1, userId);
+
+            try (ResultSet results = statement.executeQuery()) {
+                results.next();
+                return results.getInt(1);
+            }
+        }
+    }
+
     // The learner's courses and how far they are with each, as of the last sync.
     public List<Enrolment> findEnrolmentsForUser(int userId) throws SQLException {
 

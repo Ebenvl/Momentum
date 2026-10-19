@@ -152,6 +152,21 @@ public class UserRepository {
         }
     }
 
+    // Admin: change someone's name and role.
+    public boolean updateUserDetails(int userId, String fullName, String role) throws SQLException {
+
+        String sql = "UPDATE Users SET full_name = ?, role = ? WHERE user_id = ?";
+
+        try (Connection connection = database.getConnection();
+             PreparedStatement statement = connection.prepareStatement(sql)) {
+
+            statement.setString(1, fullName);
+            statement.setString(2, role);
+            statement.setInt(3, userId);
+            return statement.executeUpdate() == 1;
+        }
+    }
+
     // Links an account to a LearnTech learner, or unlinks it if idst is null.
     // Used by the sync and by the admin.
     public boolean updateIdst(int userId, Integer idst) throws SQLException {

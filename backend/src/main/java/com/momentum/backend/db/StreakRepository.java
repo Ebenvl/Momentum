@@ -6,6 +6,7 @@ import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.time.LocalDate;
 
 // Reads and saves streaks in the Streaks table. One row per learner.
 public class StreakRepository {
@@ -39,6 +40,25 @@ public class StreakRepository {
                 streak.lastActivityDate = results.getString("last_activity_date");
                 return streak;
             }
+        }
+    }
+
+    // The streak to show the learner. If their last check-in was before
+    // yesterday, the streak has already broken, so it shows 0 even though
+    // the table still has the old number until their next check-in.
+    public int activeStreak(int userId) throws SQLException {
+
+        Streak streak = findStreak(userId);
+        if (streak == null || streak.lastActivityDate == null) {
+            return 0;
+        }
+
+        LocalDate lastDay = LocalDate.parse(streak.lastActivityDate);
+        LocalDate today = LocalDate.now();
+        if (lastDay.equals(today) || lastDay.equals(today.minusDays(1))) {
+            return streak.currentStreak;
+        } else {
+            return 0;
         }
     }
 

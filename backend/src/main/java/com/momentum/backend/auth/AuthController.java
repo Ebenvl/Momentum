@@ -1,9 +1,11 @@
 package com.momentum.backend.auth;
 
+import com.momentum.backend.db.ActivityLogRepository;
 import com.momentum.backend.db.UserRepository;
 import com.momentum.backend.model.LoginRequest;
 import com.momentum.backend.model.RegisterRequest;
 import com.momentum.backend.model.User;
+import com.momentum.backend.sync.SyncService;
 import io.javalin.http.Context;
 import org.mindrot.jbcrypt.BCrypt;
 
@@ -16,10 +18,15 @@ public class AuthController {
 
     private final UserRepository userRepository;
     private final TokenService tokenService;
+    private final ActivityLogRepository activityLogRepository;
+    private final SyncService syncService;
 
-    public AuthController(UserRepository userRepository, TokenService tokenService) {
+    public AuthController(UserRepository userRepository, TokenService tokenService,
+                          ActivityLogRepository activityLogRepository, SyncService syncService) {
         this.userRepository = userRepository;
         this.tokenService = tokenService;
+        this.activityLogRepository = activityLogRepository;
+        this.syncService = syncService;
     }
 
     // -----------------------------------------------------
@@ -76,6 +83,8 @@ public class AuthController {
             String passwordHash = BCrypt.hashpw(request.password, BCrypt.gensalt());
             boolean saved = userRepository.insertUser(request.email, passwordHash, request.fullName);
             if (saved) {
+                User newUser = userRepository.findUserByEmail(request.email);
+                activityLogRepository.log(newUser.userId, "registered", "info");
                 ctx.json(Map.of("message", "registered"));
             } else {
                 ctx.status(500).json(Map.of("error", "could not register"));
@@ -115,22 +124,29 @@ public class AuthController {
             // Same message for a wrong email and a wrong password, so nobody
             // can use login to find out which emails are registered.
             if (user == null) {
+                activityLogRepository.log(null, "failed login: unknown email", "warning");
                 ctx.status(401).json(Map.of("error", "wrong email or password"));
                 return;
             }
 
             if (!BCrypt.checkpw(request.password, user.passwordHash)) {
+                activityLogRepository.log(user.userId, "failed login: wrong password", "warning");
                 ctx.status(401).json(Map.of("error", "wrong email or password"));
                 return;
             }
 
             if (user.status.equals("suspended")) {
+                activityLogRepository.log(user.userId, "failed login: account suspended", "warning");
                 ctx.status(403).json(Map.of("error", "this account is suspended"));
                 return;
             }
 
             // Records the login time.
             userRepository.updateLastLogin(user.userId);
+            activityLogRepository.log(user.userId, "logged in", "info");
+
+            // Brings their courses and points up to date, without making login wait.
+            syncService.syncUserInBackground(user);
 
             String token = tokenService.createToken(user);
 

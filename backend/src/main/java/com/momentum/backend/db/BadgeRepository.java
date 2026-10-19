@@ -135,6 +135,35 @@ public class BadgeRepository {
     }
 
 
+    // The badges learners can currently earn.
+    public List<Badge> findActiveBadges() throws SQLException {
+
+        String sql = "SELECT badge_id, name, description, image_url, rule_type, rule_value, "
+                   + "points_awarded, is_active FROM Badges WHERE is_active = TRUE";
+
+        List<Badge> badges = new ArrayList<>();
+
+        try (Connection connection = database.getConnection();
+             PreparedStatement statement = connection.prepareStatement(sql);
+             ResultSet results = statement.executeQuery()) {
+
+            while (results.next()) {
+                Badge badge = new Badge();
+                badge.badgeId = results.getInt("badge_id");
+                badge.name = results.getString("name");
+                badge.description = results.getString("description");
+                badge.imageUrl = results.getString("image_url");
+                badge.ruleType = results.getString("rule_type");
+                badge.ruleValue = results.getInt("rule_value");
+                badge.pointsAwarded = results.getInt("points_awarded");
+                badge.isActive = results.getBoolean("is_active");
+                badges.add(badge);
+            }
+        }
+
+        return badges;
+    }
+
     // Every badge, for the admin's badge screen.
     public List<Badge> findAllBadges() throws SQLException {
 

@@ -58,6 +58,27 @@ public class CourseRepository {
         }
     }
 
+    // Finds a course by its name. Capitals don't matter, because of how the
+    // database compares text. Gives back null if there is no such course.
+    public Course findCourseByName(String courseName) throws SQLException {
+
+        String sql = "SELECT course_id, platform_course_id, course_name, expected_minutes, points_value "
+                   + "FROM Courses WHERE course_name = ?";
+
+        try (Connection connection = database.getConnection();
+             PreparedStatement statement = connection.prepareStatement(sql)) {
+
+            statement.setString(1, courseName);
+
+            try (ResultSet results = statement.executeQuery()) {
+                if (!results.next()) {
+                    return null;
+                }
+                return readCourse(results);
+            }
+        }
+    }
+
     // Used by the sync: adds the course if it is new, or updates its name if it
     // is already there. Keyed on platform_course_id, never on the code.
     //

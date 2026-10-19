@@ -1,9 +1,12 @@
 package com.momentum.backend.profile;
 
 import com.momentum.backend.auth.CurrentUser;
+import com.momentum.backend.db.PointsRepository;
 import com.momentum.backend.db.SnapshotRepository;
+import com.momentum.backend.db.StreakRepository;
 import com.momentum.backend.db.UserRepository;
 import com.momentum.backend.model.ProfileRequest;
+import com.momentum.backend.model.Streak;
 import com.momentum.backend.model.User;
 import io.javalin.http.Context;
 
@@ -15,10 +18,15 @@ public class ProfileController {
 
     private final UserRepository userRepository;
     private final SnapshotRepository snapshotRepository;
+    private final PointsRepository pointsRepository;
+    private final StreakRepository streakRepository;
 
-    public ProfileController(UserRepository userRepository, SnapshotRepository snapshotRepository) {
+    public ProfileController(UserRepository userRepository, SnapshotRepository snapshotRepository,
+                             PointsRepository pointsRepository, StreakRepository streakRepository) {
         this.userRepository = userRepository;
         this.snapshotRepository = snapshotRepository;
+        this.pointsRepository = pointsRepository;
+        this.streakRepository = streakRepository;
     }
 
     // -----------------------------------------------------
@@ -41,6 +49,11 @@ public class ProfileController {
 
             // Never send the password hash back to the app.
             user.passwordHash = null;
+            user.totalPoints = pointsRepository.totalPoints(userId);
+            user.currentStreak = streakRepository.activeStreak(userId);
+
+            Streak streak = streakRepository.findStreak(userId);
+            user.longestStreak = streak != null ? streak.longestStreak : 0;
             ctx.json(user);
         } catch (SQLException e) {
             ctx.status(500).json(Map.of("error", "something went wrong, try again"));

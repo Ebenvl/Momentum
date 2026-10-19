@@ -2,9 +2,11 @@ package com.momentum.backend;
 
 import com.auth0.jwt.interfaces.DecodedJWT;
 import com.momentum.backend.admin.AdminController;
+import com.momentum.backend.admin.SettingsController;
 import com.momentum.backend.auth.AuthController;
 import com.momentum.backend.auth.TokenService;
 import com.momentum.backend.config.Config;
+import com.momentum.backend.config.Encryption;
 import com.momentum.backend.courses.CourseController;
 import com.momentum.backend.db.ActivityLogRepository;
 import com.momentum.backend.db.BadgeRepository;
@@ -13,6 +15,7 @@ import com.momentum.backend.db.CourseRepository;
 import com.momentum.backend.db.Database;
 import com.momentum.backend.db.EnrolmentRepository;
 import com.momentum.backend.db.GoalRepository;
+import com.momentum.backend.db.PlatformConfigRepository;
 import com.momentum.backend.db.PointsRepository;
 import com.momentum.backend.db.SnapshotRepository;
 import com.momentum.backend.db.StatsRepository;
@@ -20,15 +23,20 @@ import com.momentum.backend.db.StreakRepository;
 import com.momentum.backend.db.StudySessionRepository;
 import com.momentum.backend.db.UserRepository;
 import com.momentum.backend.goals.GoalController;
+import com.momentum.backend.leaderboard.LeaderboardController;
 import com.momentum.backend.learntech.CoursesResponse;
 import com.momentum.backend.learntech.LearnTechClient;
 import com.momentum.backend.learntech.LearnTechException;
 import com.momentum.backend.profile.ProfileController;
+import com.momentum.backend.rewards.BadgeService;
 import com.momentum.backend.sessions.StudySessionController;
 import com.momentum.backend.sync.SyncService;
 import io.javalin.Javalin;
 
 import java.util.Map;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
 
 /**
  * Starting point of the LearnTech Momentum backend.
@@ -60,20 +68,37 @@ public class App {
         StudySessionRepository studySessionRepository = new StudySessionRepository(database);
         StatsRepository statsRepository = new StatsRepository(database);
 
+        // Awards badges, after a sync or a check-in.
+        BadgeService badgeService = new BadgeService(badgeRepository, enrolmentRepository,
+                streakRepository, pointsRepository, activityLogRepository);
+
         // Talks to the LearnTech API (or the sample files, if base_url is "sample").
         LearnTechClient learnTechClient = new LearnTechClient(config);
         SyncService syncService = new SyncService(learnTechClient, courseRepository,
-                userRepository, enrolmentRepository, snapshotRepository, pointsRepository);
+                userRepository, enrolmentRepository, snapshotRepository, pointsRepository,
+                activityLogRepository, streakRepository, badgeService);
+
+        // The admin's LearnTech settings, saved encrypted in the database.
+        // If there are any, they are used instead of config.properties.
+        PlatformConfigRepository platformConfigRepository = new PlatformConfigRepository(database);
+        Encryption encryption = new Encryption(config);
+        SettingsController settingsController = new SettingsController(platformConfigRepository,
+                activityLogRepository, learnTechClient, encryption);
+        settingsController.loadSavedSettings();
 
         // Controllers handle requests from the app.
         TokenService tokenService = new TokenService(config);
-        AuthController authController = new AuthController(userRepository, tokenService);
-        GoalController goalController = new GoalController(goalRepository, checkInRepository, courseRepository);
-        ProfileController profileController = new ProfileController(userRepository, snapshotRepository);
+        AuthController authController = new AuthController(userRepository, tokenService,
+                activityLogRepository, syncService);
+        GoalController goalController = new GoalController(goalRepository, checkInRepository, courseRepository,
+                streakRepository, badgeService);
+        ProfileController profileController = new ProfileController(userRepository, snapshotRepository, pointsRepository,
+                streakRepository);
         AdminController adminController = new AdminController(userRepository, courseRepository,
                 badgeRepository, activityLogRepository, statsRepository);
         CourseController courseController = new CourseController(courseRepository, enrolmentRepository);
-        StudySessionController studySessionController = new StudySessionController(studySessionRepository);
+        StudySessionController studySessionController = new StudySessionController(studySessionRepository, courseRepository);
+        LeaderboardController leaderboardController = new LeaderboardController(pointsRepository);
 
         // In Javalin 7, the port and every route are set up inside this
         // block, before the server starts. The block's variable is called
@@ -167,11 +192,18 @@ public class App {
             javalinConfig.routes.post("/goals/{id}/checkins", goalController::checkIn);
 
             // -----------------------------------------------------
+            // Leaderboard (see leaderboard/LeaderboardController.java)
+            // -----------------------------------------------------
+            javalinConfig.routes.get("/leaderboard", leaderboardController::getLeaderboard);
+
+            // -----------------------------------------------------
             // Admin (see admin/AdminController.java)
             // -----------------------------------------------------
             javalinConfig.routes.get("/admin/stats", adminController::getStats);
             javalinConfig.routes.get("/admin/users", adminController::getUsers);
+            javalinConfig.routes.post("/admin/users", adminController::createUser);
             javalinConfig.routes.get("/admin/users/{id}", adminController::getUser);
+            javalinConfig.routes.put("/admin/users/{id}", adminController::updateUser);
             javalinConfig.routes.put("/admin/users/{id}/status", adminController::setUserStatus);
             javalinConfig.routes.put("/admin/users/{id}/link", adminController::linkUser);
             javalinConfig.routes.delete("/admin/users/{id}", adminController::deleteUser);
@@ -187,6 +219,11 @@ public class App {
             javalinConfig.routes.delete("/admin/badges/{id}", adminController::deleteBadge);
 
             javalinConfig.routes.get("/admin/logs", adminController::getLogs);
+
+            // LearnTech API settings (see admin/SettingsController.java)
+            javalinConfig.routes.get("/admin/settings", settingsController::getSettings);
+            javalinConfig.routes.put("/admin/settings", settingsController::saveSettings);
+            javalinConfig.routes.post("/admin/settings/test", settingsController::testConnection);
         });
 
         // Close the server and the database connections cleanly
@@ -199,27 +236,17 @@ public class App {
         app.start();
         System.out.println("Momentum backend running on http://localhost:" + port);
 
-        // Sync courses, then learners, from LearnTech once at startup.
-        // Courses go first, because enrolments need the courses to exist.
+        // Sync from LearnTech now, and then every 30 minutes.
         // If LearnTech is down, the backend still runs, and the error is logged.
-        try {
-            int courses = syncService.syncCourses();
-            System.out.println("Synced " + courses + " courses from LearnTech");
-
-            int learners = syncService.syncLearners();
-            System.out.println("Synced " + learners + " learners linked to app accounts");
-        } catch (Exception e) {
-            System.out.println("Sync failed: " + e.getMessage());
-            try {
-                // The action column holds at most 100 characters, so long messages are cut short.
-                String action = "sync_failed: " + e.getMessage();
-                if (action.length() > 100) {
-                    action = action.substring(0, 100);
-                }
-                activityLogRepository.log(null, action, "error");
-            } catch (Exception logError) {
-                System.out.println("Could not write to the activity log either: " + logError.getMessage());
-            }
-        }
+        // Daemon means this thread doesn't keep the backend running after Ctrl+C.
+        ScheduledExecutorService scheduler = Executors.newSingleThreadScheduledExecutor(task -> {
+            Thread thread = new Thread(task);
+            thread.setDaemon(true);
+            return thread;
+        });
+        scheduler.scheduleAtFixedRate(syncService::syncAll, 0, SYNC_EVERY_MINUTES, TimeUnit.MINUTES);
     }
+
+    // How often the scheduled sync runs.
+    private static final int SYNC_EVERY_MINUTES = 30;
 }
