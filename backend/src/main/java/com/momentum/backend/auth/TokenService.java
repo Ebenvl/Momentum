@@ -1,9 +1,9 @@
 package com.momentum.backend.auth;
 
-import com.auth0.jwt.interfaces.DecodedJWT;
-import com.auth0.jwt.exceptions.JWTVerificationException;
 import com.auth0.jwt.JWT;
 import com.auth0.jwt.algorithms.Algorithm;
+import com.auth0.jwt.exceptions.JWTVerificationException;
+import com.auth0.jwt.interfaces.DecodedJWT;
 import com.momentum.backend.config.Config;
 import com.momentum.backend.model.User;
 
@@ -24,13 +24,11 @@ public class TokenService {
     }
 
     public String createToken(User user) {
-
         return JWT.create()
-        .withSubject(String.valueOf(user.userId))
-        .withClaim("role", user.role)
-        .withExpiresAt(Instant.now().plus(7, ChronoUnit.DAYS))
-        .sign(algorithm);
-        
+                .withSubject(String.valueOf(user.userId))
+                .withClaim("role", user.role)
+                .withExpiresAt(Instant.now().plus(7, ChronoUnit.DAYS))
+                .sign(algorithm);
     }
 
     public DecodedJWT verifyToken(String token) {
@@ -40,5 +38,4 @@ public class TokenService {
             return null;
         }
     }
-
 }

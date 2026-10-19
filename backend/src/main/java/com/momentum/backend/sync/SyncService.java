@@ -16,6 +16,8 @@ import com.momentum.backend.model.Course;
 import com.momentum.backend.model.User;
 
 import java.sql.SQLException;
+import java.time.YearMonth;
+import java.util.concurrent.ThreadLocalRandom;
 
 // Copies data from LearnTech into our own database.
 //
@@ -103,6 +105,16 @@ public class SyncService {
                 enrolmentRepository.saveEnrolment(user.userId, course.courseId, enrolment.state,
                         enrolment.timeSpentMinutes, assessmentStatus, score, scoreMax,
                         enrolment.firstAccess, enrolment.dateCompleted);
+
+                // Completed courses earn points. The points table only allows
+                // one award per course per learner, so a re-sync never doubles it.
+                if ("completed".equals(enrolment.state)) {
+                    String monthKey = enrolment.dateCompleted != null
+                            ? enrolment.dateCompleted.substring(0, 7)
+                            : YearMonth.now().toString();
+                    pointsRepository.awardPoints(user.userId, pointsFor(course),
+                            "course_completed", course.courseId, monthKey);
+                }
             }
 
             // Records where the learner stands right now. LearnTech keeps no
@@ -119,5 +131,20 @@ public class SyncService {
         }
 
         return linked;
+    }
+
+    // How many points a completed course is worth.
+    private int pointsFor(Course course) {
+        if (course.pointsValue != null) {
+            return course.pointsValue;
+        } else if (course.platformCourseId == 58) {
+            // TEMPORARY: Fast Course gets a random score until LearnTech sends the real one.
+            return ThreadLocalRandom.current().nextInt(1, 21);
+        } else if (course.expectedMinutes != null) {
+            // TEMPORARY: the course's minutes are used as its score for now.
+            return course.expectedMinutes;
+        } else {
+            return 10;
+        }
     }
 }

@@ -140,7 +140,6 @@ public class AuthController {
                 "userId", user.userId,
                 "fullName", user.fullName,
                 "role", user.role));
-                
         } catch (SQLException e) {
             ctx.status(500).json(Map.of("error", "something went wrong, try again"));
         }
