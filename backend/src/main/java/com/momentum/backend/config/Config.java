@@ -41,6 +41,12 @@ public class Config {
         return value.trim();
     }
 
+    /** Returns a setting, or null if it isn't in config.properties. For optional settings. */
+    public String getOptional(String key) {
+        String value = properties.getProperty(key);
+        return value == null || value.isBlank() ? null : value.trim();
+    }
+
     /** Returns a setting as a whole number, for example the port. */
     public int getInt(String key) {
         return Integer.parseInt(get(key));

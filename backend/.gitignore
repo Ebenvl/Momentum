@@ -7,3 +7,6 @@ out/
 # Local settings with real passwords. NEVER commit this.
 # Copy config.example.properties to config.properties and fill in your own values.
 config.properties
+
+# Database backups. They hold every account and password hash, so they stay on this computer.
+backups/

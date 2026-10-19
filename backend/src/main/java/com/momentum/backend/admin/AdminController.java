@@ -4,6 +4,7 @@ import com.momentum.backend.auth.CurrentUser;
 import com.momentum.backend.db.ActivityLogRepository;
 import com.momentum.backend.db.BadgeRepository;
 import com.momentum.backend.db.CourseRepository;
+import com.momentum.backend.db.ExportRepository;
 import com.momentum.backend.db.StatsRepository;
 import com.momentum.backend.db.UserRepository;
 import com.momentum.backend.model.AdminUserRequest;
@@ -34,15 +35,17 @@ public class AdminController {
     private final BadgeRepository badgeRepository;
     private final ActivityLogRepository activityLogRepository;
     private final StatsRepository statsRepository;
+    private final ExportRepository exportRepository;
 
     public AdminController(UserRepository userRepository, CourseRepository courseRepository,
                            BadgeRepository badgeRepository, ActivityLogRepository activityLogRepository,
-                           StatsRepository statsRepository) {
+                           StatsRepository statsRepository, ExportRepository exportRepository) {
         this.userRepository = userRepository;
         this.courseRepository = courseRepository;
         this.badgeRepository = badgeRepository;
         this.activityLogRepository = activityLogRepository;
         this.statsRepository = statsRepository;
+        this.exportRepository = exportRepository;
     }
 
     // =====================================================
@@ -609,6 +612,41 @@ public class AdminController {
             } else {
                 ctx.status(404).json(Map.of("error", "badge not found"));
             }
+        } catch (SQLException e) {
+            ctx.status(500).json(Map.of("error", "something went wrong, try again"));
+        }
+    }
+
+    // =====================================================
+    // Export
+    // =====================================================
+
+    // -----------------------------------------------------
+    // GET /admin/export/{table}   download a table as a CSV file
+    // For example /admin/export/users or /admin/export/points
+    // -----------------------------------------------------
+    public void exportTable(Context ctx) {
+
+        if (!requireAdmin(ctx)) {
+            return;
+        }
+
+        String table = ctx.pathParam("table");
+
+        try {
+            String csv = exportRepository.exportCsv(table);
+            if (csv == null) {
+                ctx.status(404).json(Map.of("error", "can't export that, pick one of: "
+                        + String.join(", ", exportRepository.tableNames())));
+                return;
+            }
+
+            activityLogRepository.log(CurrentUser.id(ctx), "exported " + table, "info");
+
+            // Content-Disposition makes the browser save it as a file instead of showing it.
+            ctx.contentType("text/csv; charset=utf-8");
+            ctx.header("Content-Disposition", "attachment; filename=\"momentum-" + table + ".csv\"");
+            ctx.result(csv);
         } catch (SQLException e) {
             ctx.status(500).json(Map.of("error", "something went wrong, try again"));
         }

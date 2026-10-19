@@ -5,6 +5,7 @@ import com.momentum.backend.admin.AdminController;
 import com.momentum.backend.admin.SettingsController;
 import com.momentum.backend.auth.AuthController;
 import com.momentum.backend.auth.TokenService;
+import com.momentum.backend.backup.BackupService;
 import com.momentum.backend.config.Config;
 import com.momentum.backend.config.Encryption;
 import com.momentum.backend.courses.CourseController;
@@ -14,6 +15,7 @@ import com.momentum.backend.db.CheckInRepository;
 import com.momentum.backend.db.CourseRepository;
 import com.momentum.backend.db.Database;
 import com.momentum.backend.db.EnrolmentRepository;
+import com.momentum.backend.db.ExportRepository;
 import com.momentum.backend.db.GoalRepository;
 import com.momentum.backend.db.PlatformConfigRepository;
 import com.momentum.backend.db.PointsRepository;
@@ -68,6 +70,7 @@ public class App {
         ActivityLogRepository activityLogRepository = new ActivityLogRepository(database);
         StudySessionRepository studySessionRepository = new StudySessionRepository(database);
         StatsRepository statsRepository = new StatsRepository(database);
+        ExportRepository exportRepository = new ExportRepository(database);
 
         // Completes goals and awards badges, after a sync or a check-in.
         GoalChecker goalChecker = new GoalChecker(goalRepository, enrolmentRepository,
@@ -98,7 +101,7 @@ public class App {
         ProfileController profileController = new ProfileController(userRepository, snapshotRepository, pointsRepository,
                 streakRepository, badgeRepository);
         AdminController adminController = new AdminController(userRepository, courseRepository,
-                badgeRepository, activityLogRepository, statsRepository);
+                badgeRepository, activityLogRepository, statsRepository, exportRepository);
         CourseController courseController = new CourseController(courseRepository, enrolmentRepository);
         StudySessionController studySessionController = new StudySessionController(studySessionRepository, courseRepository);
         LeaderboardController leaderboardController = new LeaderboardController(pointsRepository);
@@ -223,6 +226,7 @@ public class App {
             javalinConfig.routes.delete("/admin/badges/{id}", adminController::deleteBadge);
 
             javalinConfig.routes.get("/admin/logs", adminController::getLogs);
+            javalinConfig.routes.get("/admin/export/{table}", adminController::exportTable);
 
             // LearnTech API settings (see admin/SettingsController.java)
             javalinConfig.routes.get("/admin/settings", settingsController::getSettings);
@@ -249,6 +253,11 @@ public class App {
             return thread;
         });
         scheduler.scheduleAtFixedRate(syncService::syncAll, 0, SYNC_EVERY_MINUTES, TimeUnit.MINUTES);
+
+        // Back up the database once a day. It checks every hour, and only backs up
+        // if there is no backup for today yet, so a restart doesn't make extra ones.
+        BackupService backupService = new BackupService(config, activityLogRepository);
+        scheduler.scheduleAtFixedRate(backupService::backupIfDue, 1, 60, TimeUnit.MINUTES);
     }
 
     // How often the scheduled sync runs.
