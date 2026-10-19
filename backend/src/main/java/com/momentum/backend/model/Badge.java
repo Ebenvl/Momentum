@@ -11,5 +11,6 @@ public class Badge {
     public int ruleValue;
     public int pointsAwarded;
     public boolean isActive;
+    public String awardedAt;    // only filled in for a learner's own badges
 
 }

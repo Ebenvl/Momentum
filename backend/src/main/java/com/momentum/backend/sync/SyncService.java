@@ -17,6 +17,7 @@ import com.momentum.backend.learntech.LearnersResponse;
 import com.momentum.backend.model.Course;
 import com.momentum.backend.model.User;
 import com.momentum.backend.rewards.BadgeService;
+import com.momentum.backend.rewards.GoalChecker;
 
 import java.sql.SQLException;
 import java.time.YearMonth;
@@ -38,6 +39,7 @@ public class SyncService {
     private final PointsRepository pointsRepository;
     private final ActivityLogRepository activityLogRepository;
     private final StreakRepository streakRepository;
+    private final GoalChecker goalChecker;
     private final BadgeService badgeService;
 
     // One background thread for login syncs. Daemon means it doesn't keep
@@ -52,7 +54,7 @@ public class SyncService {
                        UserRepository userRepository, EnrolmentRepository enrolmentRepository,
                        SnapshotRepository snapshotRepository, PointsRepository pointsRepository,
                        ActivityLogRepository activityLogRepository, StreakRepository streakRepository,
-                       BadgeService badgeService) {
+                       GoalChecker goalChecker, BadgeService badgeService) {
         this.learnTechClient = learnTechClient;
         this.courseRepository = courseRepository;
         this.userRepository = userRepository;
@@ -61,6 +63,7 @@ public class SyncService {
         this.pointsRepository = pointsRepository;
         this.activityLogRepository = activityLogRepository;
         this.streakRepository = streakRepository;
+        this.goalChecker = goalChecker;
         this.badgeService = badgeService;
     }
 
@@ -133,7 +136,10 @@ public class SyncService {
                     : learnTechClient.getAllLearners();
 
             for (ApiLearner learner : response.learners) {
-                if (learner.email != null && learner.email.equalsIgnoreCase(user.email)) {
+                boolean theirs = user.idst != null
+                        ? learner.idst == user.idst
+                        : learner.email != null && learner.email.equalsIgnoreCase(user.email);
+                if (theirs) {
                     syncLearner(learner);
                 }
             }
@@ -152,9 +158,19 @@ public class SyncService {
     // Gives back false if they were skipped (no account, or already linked elsewhere).
     private boolean syncLearner(ApiLearner learner) throws SQLException {
 
-        User user = userRepository.findUserByEmail(learner.email);
+        // The account already linked to this learner (by the sync or by the admin).
+        // If there is none yet, look for an account with the same email.
+        User user = userRepository.findUserByIdst(learner.idst);
         if (user == null) {
-            return false;   // no app account with this email
+            user = userRepository.findUserByEmail(learner.email);
+        }
+        if (user == null) {
+            return false;   // no app account for this learner
+        }
+
+        // The email matched, but the admin linked this account to a different learner.
+        if (user.idst != null && user.idst != learner.idst) {
+            return false;
         }
 
         // Link the account the first time we see a match.
@@ -199,7 +215,9 @@ public class SyncService {
             }
         }
 
-        // Any badges reached by these courses. Before the snapshot, so badge points are in it.
+        // Any goals and badges reached by these courses.
+        // Before the snapshot, so their points are in it.
+        goalChecker.checkGoals(user.userId);
         badgeService.checkBadges(user.userId);
 
         // Records where the learner stands right now. LearnTech keeps no

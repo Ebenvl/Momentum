@@ -135,6 +135,45 @@ public class BadgeRepository {
     }
 
 
+    // The badges a learner has earned, newest first.
+    // UserBadges says which badge and when, the JOIN adds the badge's details from Badges.
+    public List<Badge> findBadgesForUser(int userId) throws SQLException {
+
+        String sql = "SELECT Badges.badge_id, Badges.name, Badges.description, Badges.image_url, "
+                   + "Badges.rule_type, Badges.rule_value, Badges.points_awarded, Badges.is_active, "
+                   + "UserBadges.awarded_at "
+                   + "FROM UserBadges "
+                   + "JOIN Badges ON Badges.badge_id = UserBadges.badge_id "
+                   + "WHERE UserBadges.user_id = ? "
+                   + "ORDER BY UserBadges.awarded_at DESC";
+
+        List<Badge> badges = new ArrayList<>();
+
+        try (Connection connection = database.getConnection();
+             PreparedStatement statement = connection.prepareStatement(sql)) {
+
+            statement.setInt(1, userId);
+
+            try (ResultSet results = statement.executeQuery()) {
+                while (results.next()) {
+                    Badge badge = new Badge();
+                    badge.badgeId = results.getInt("badge_id");
+                    badge.name = results.getString("name");
+                    badge.description = results.getString("description");
+                    badge.imageUrl = results.getString("image_url");
+                    badge.ruleType = results.getString("rule_type");
+                    badge.ruleValue = results.getInt("rule_value");
+                    badge.pointsAwarded = results.getInt("points_awarded");
+                    badge.isActive = results.getBoolean("is_active");
+                    badge.awardedAt = results.getString("awarded_at");
+                    badges.add(badge);
+                }
+            }
+        }
+
+        return badges;
+    }
+
     // The badges learners can currently earn.
     public List<Badge> findActiveBadges() throws SQLException {
 

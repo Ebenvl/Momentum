@@ -29,6 +29,7 @@ import com.momentum.backend.learntech.LearnTechClient;
 import com.momentum.backend.learntech.LearnTechException;
 import com.momentum.backend.profile.ProfileController;
 import com.momentum.backend.rewards.BadgeService;
+import com.momentum.backend.rewards.GoalChecker;
 import com.momentum.backend.sessions.StudySessionController;
 import com.momentum.backend.sync.SyncService;
 import io.javalin.Javalin;
@@ -68,7 +69,9 @@ public class App {
         StudySessionRepository studySessionRepository = new StudySessionRepository(database);
         StatsRepository statsRepository = new StatsRepository(database);
 
-        // Awards badges, after a sync or a check-in.
+        // Completes goals and awards badges, after a sync or a check-in.
+        GoalChecker goalChecker = new GoalChecker(goalRepository, enrolmentRepository,
+                streakRepository, pointsRepository, activityLogRepository);
         BadgeService badgeService = new BadgeService(badgeRepository, enrolmentRepository,
                 streakRepository, pointsRepository, activityLogRepository);
 
@@ -76,7 +79,7 @@ public class App {
         LearnTechClient learnTechClient = new LearnTechClient(config);
         SyncService syncService = new SyncService(learnTechClient, courseRepository,
                 userRepository, enrolmentRepository, snapshotRepository, pointsRepository,
-                activityLogRepository, streakRepository, badgeService);
+                activityLogRepository, streakRepository, goalChecker, badgeService);
 
         // The admin's LearnTech settings, saved encrypted in the database.
         // If there are any, they are used instead of config.properties.
@@ -91,9 +94,9 @@ public class App {
         AuthController authController = new AuthController(userRepository, tokenService,
                 activityLogRepository, syncService);
         GoalController goalController = new GoalController(goalRepository, checkInRepository, courseRepository,
-                streakRepository, badgeService);
+                streakRepository, goalChecker, badgeService);
         ProfileController profileController = new ProfileController(userRepository, snapshotRepository, pointsRepository,
-                streakRepository);
+                streakRepository, badgeRepository);
         AdminController adminController = new AdminController(userRepository, courseRepository,
                 badgeRepository, activityLogRepository, statsRepository);
         CourseController courseController = new CourseController(courseRepository, enrolmentRepository);
@@ -164,6 +167,7 @@ public class App {
             javalinConfig.routes.get("/me", profileController::getMe);
             javalinConfig.routes.put("/me", profileController::updateMe);
             javalinConfig.routes.get("/me/progress", profileController::getProgress);
+            javalinConfig.routes.get("/me/badges", profileController::getBadges);
 
             // -----------------------------------------------------
             // Courses (see courses/CourseController.java)

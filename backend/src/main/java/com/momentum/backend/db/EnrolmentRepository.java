@@ -71,6 +71,41 @@ public class EnrolmentRepository {
         }
     }
 
+    // All the minutes the learner has spent in their courses, for goals.
+    public int totalMinutes(int userId) throws SQLException {
+
+        String sql = "SELECT COALESCE(SUM(time_spent_minutes), 0) FROM Enrolments WHERE user_id = ?";
+
+        try (Connection connection = database.getConnection();
+             PreparedStatement statement = connection.prepareStatement(sql)) {
+
+            statement.setInt(1, userId);
+
+            try (ResultSet results = statement.executeQuery()) {
+                results.next();
+                return results.getInt(1);
+            }
+        }
+    }
+
+    // Has the learner completed this course? Uses our own course_id.
+    public boolean isCompleted(int userId, int courseId) throws SQLException {
+
+        String sql = "SELECT enrolment_id FROM Enrolments "
+                   + "WHERE user_id = ? AND course_id = ? AND state = 'completed'";
+
+        try (Connection connection = database.getConnection();
+             PreparedStatement statement = connection.prepareStatement(sql)) {
+
+            statement.setInt(1, userId);
+            statement.setInt(2, courseId);
+
+            try (ResultSet results = statement.executeQuery()) {
+                return results.next();
+            }
+        }
+    }
+
     // The learner's courses and how far they are with each, as of the last sync.
     public List<Enrolment> findEnrolmentsForUser(int userId) throws SQLException {
 

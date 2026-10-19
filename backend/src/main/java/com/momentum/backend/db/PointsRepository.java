@@ -1,14 +1,13 @@
 package com.momentum.backend.db;
 
+import com.momentum.backend.model.LeaderboardEntry;
+
 import java.sql.Connection;
 import java.sql.PreparedStatement;
-import java.sql.SQLException;
 import java.sql.ResultSet;
-
+import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.List;
-
-import com.momentum.backend.model.LeaderboardEntry;
 
 // Saves points awards in the PointsTransactions table.
 public class PointsRepository {

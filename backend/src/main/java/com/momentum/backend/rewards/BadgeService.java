@@ -5,8 +5,10 @@ import com.momentum.backend.db.BadgeRepository;
 import com.momentum.backend.db.EnrolmentRepository;
 import com.momentum.backend.db.PointsRepository;
 import com.momentum.backend.db.StreakRepository;
+import com.momentum.backend.model.Badge;
 
 import java.sql.SQLException;
+import java.time.YearMonth;
 
 // Awards badges when a learner reaches a badge's rule.
 // Runs after every sync of a learner and after every check-in.
@@ -30,6 +32,30 @@ public class BadgeService {
 
     // Checks every active badge against this learner, and awards the ones they've reached.
     public void checkBadges(int userId) throws SQLException {
+
+        for (Badge badge : badgeRepository.findActiveBadges()) {
+            int value;
+            if ("courses_completed".equals(badge.ruleType)) {
+                value = enrolmentRepository.countCompleted(userId);
+            } else if ("streak_days".equals(badge.ruleType)) {
+                value = streakRepository.activeStreak(userId);
+            } else if ("total_points".equals(badge.ruleType)) {
+                value = pointsRepository.totalPoints(userId);
+            } else {
+                continue;
+            }
+
+            if (value >= badge.ruleValue) {
+                boolean isNew = badgeRepository.awardBadge(userId, badge.badgeId);
+
+                if (isNew) {
+                    pointsRepository.awardPoints(userId, badge.pointsAwarded, "badge_awarded",
+                            badge.badgeId, YearMonth.now().toString());
+                    activityLogRepository.log(userId, "badge earned: " + badge.name, "info");
+                }
+            }
+
+        }
 
     }
 }

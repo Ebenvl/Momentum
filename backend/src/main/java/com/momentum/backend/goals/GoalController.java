@@ -11,6 +11,7 @@ import com.momentum.backend.model.GoalRequest;
 import com.momentum.backend.model.StatusRequest;
 import com.momentum.backend.model.Streak;
 import com.momentum.backend.rewards.BadgeService;
+import com.momentum.backend.rewards.GoalChecker;
 import io.javalin.http.Context;
 
 import java.sql.SQLException;
@@ -29,15 +30,17 @@ public class GoalController {
     private final CheckInRepository checkInRepository;
     private final CourseRepository courseRepository;
     private final StreakRepository streakRepository;
+    private final GoalChecker goalChecker;
     private final BadgeService badgeService;
 
     public GoalController(GoalRepository goalRepository, CheckInRepository checkInRepository,
                           CourseRepository courseRepository, StreakRepository streakRepository,
-                          BadgeService badgeService) {
+                          GoalChecker goalChecker, BadgeService badgeService) {
         this.goalRepository = goalRepository;
         this.checkInRepository = checkInRepository;
         this.courseRepository = courseRepository;
         this.streakRepository = streakRepository;
+        this.goalChecker = goalChecker;
         this.badgeService = badgeService;
     }
 
@@ -307,6 +310,7 @@ public class GoalController {
             boolean saved = checkInRepository.insertCheckIn(goalId, userId, request.note, request.valueLogged);
             if (saved) {
                 updateStreak(userId);
+                goalChecker.checkGoals(userId);
                 badgeService.checkBadges(userId);
                 ctx.status(201).json(Map.of("message", "check-in logged"));
             } else {

@@ -1,6 +1,7 @@
 package com.momentum.backend.profile;
 
 import com.momentum.backend.auth.CurrentUser;
+import com.momentum.backend.db.BadgeRepository;
 import com.momentum.backend.db.PointsRepository;
 import com.momentum.backend.db.SnapshotRepository;
 import com.momentum.backend.db.StreakRepository;
@@ -20,13 +21,34 @@ public class ProfileController {
     private final SnapshotRepository snapshotRepository;
     private final PointsRepository pointsRepository;
     private final StreakRepository streakRepository;
+    private final BadgeRepository badgeRepository;
 
     public ProfileController(UserRepository userRepository, SnapshotRepository snapshotRepository,
-                             PointsRepository pointsRepository, StreakRepository streakRepository) {
+                             PointsRepository pointsRepository, StreakRepository streakRepository,
+                             BadgeRepository badgeRepository) {
         this.userRepository = userRepository;
         this.snapshotRepository = snapshotRepository;
         this.pointsRepository = pointsRepository;
         this.streakRepository = streakRepository;
+        this.badgeRepository = badgeRepository;
+    }
+
+    // -----------------------------------------------------
+    // GET /me/badges   the badges the learner has earned, newest first
+    // -----------------------------------------------------
+    public void getBadges(Context ctx) {
+
+        Integer userId = CurrentUser.id(ctx);
+        if (userId == null) {
+            ctx.status(401).json(Map.of("error", "please log in"));
+            return;
+        }
+
+        try {
+            ctx.json(badgeRepository.findBadgesForUser(userId));
+        } catch (SQLException e) {
+            ctx.status(500).json(Map.of("error", "something went wrong, try again"));
+        }
     }
 
     // -----------------------------------------------------

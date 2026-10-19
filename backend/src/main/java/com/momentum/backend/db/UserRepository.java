@@ -108,6 +108,34 @@ public class UserRepository {
         }
     }
 
+    // Finds the account linked to this LearnTech learner. Gives back null if none is.
+    public User findUserByIdst(int idst) throws SQLException {
+
+        String sql = "SELECT user_id, idst, email, password_hash, full_name, role, status FROM Users WHERE idst = ?";
+
+        try (Connection connection = database.getConnection();
+             PreparedStatement statement = connection.prepareStatement(sql)) {
+
+            statement.setInt(1, idst);
+
+            try (ResultSet results = statement.executeQuery()) {
+                if (!results.next()) {
+                    return null;
+                }
+
+                User user = new User();
+                user.userId = results.getInt("user_id");
+                user.idst = results.getObject("idst", Integer.class);
+                user.email = results.getString("email");
+                user.passwordHash = results.getString("password_hash");
+                user.fullName = results.getString("full_name");
+                user.role = results.getString("role");
+                user.status = results.getString("status");
+                return user;
+            }
+        }
+    }
+
     // Is this LearnTech learner already linked to an account? Each learner
     // can only be linked to one account (unique key on idst).
     public boolean idstTaken(int idst) throws SQLException {
