@@ -206,12 +206,17 @@ public class SyncService {
 
             // Completed courses earn points. The points table only allows
             // one award per course per learner, so a re-sync never doubles it.
+            // 0 points means the completion doesn't count (yet), so nothing is saved,
+            // and it's checked again on the next sync.
             if ("completed".equals(enrolment.state)) {
-                String monthKey = enrolment.dateCompleted != null
-                        ? enrolment.dateCompleted.substring(0, 7)
-                        : YearMonth.now().toString();
-                pointsRepository.awardPoints(user.userId, pointsFor(course),
-                        "course_completed", course.courseId, monthKey);
+                int points = pointsFor(course, enrolment.timeSpentMinutes);
+                if (points > 0) {
+                    String monthKey = enrolment.dateCompleted != null
+                            ? enrolment.dateCompleted.substring(0, 7)
+                            : YearMonth.now().toString();
+                    pointsRepository.awardPoints(user.userId, points,
+                            "course_completed", course.courseId, monthKey);
+                }
             }
         }
 
@@ -232,18 +237,32 @@ public class SyncService {
         return true;
     }
 
-    // How many points a completed course is worth.
-    private int pointsFor(Course course) {
-        if (course.pointsValue != null) {
+    // How many points a completed course is worth, using LearnTech's formula:
+    // the course's expected minutes, but only if the learner spent at least
+    // 70% of that time in it. Rushed completions give 0.
+    // Time is only a check, it's never the score itself.
+    private int pointsFor(Course course, int timeSpentMinutes) {
+        if (course.platformCourseId == FAST_COURSE_ID) {
+            // DEMO: Fast Course is a 10-second course for showing points live.
+            // The API only counts whole minutes, so it always shows 0 minutes
+            // spent and the time check could never pass. It gets a random score instead.
+            return ThreadLocalRandom.current().nextInt(1, 31);
+        } else if (course.expectedMinutes == null) {
+            // No duration to check against: the admin's points value, otherwise a flat 10.
+            return course.pointsValue != null ? course.pointsValue : 10;
+        } else if (timeSpentMinutes < MIN_TIME_SHARE * course.expectedMinutes) {
+            return 0;
+        } else if (course.pointsValue != null) {
             return course.pointsValue;
-        } else if (course.platformCourseId == 58) {
-            // TEMPORARY: Fast Course gets a random score until LearnTech sends the real one.
-            return ThreadLocalRandom.current().nextInt(1, 21);
-        } else if (course.expectedMinutes != null) {
-            // TEMPORARY: the course's minutes are used as its score for now.
-            return course.expectedMinutes;
         } else {
-            return 10;
+            return course.expectedMinutes;
         }
     }
+
+    // LearnTech's course_id for Fast Course, the demo course.
+    private static final int FAST_COURSE_ID = 58;
+
+    // The share of a course's expected minutes a learner has to spend in it
+    // for a completion to earn points.
+    private static final double MIN_TIME_SHARE = 0.7;
 }
