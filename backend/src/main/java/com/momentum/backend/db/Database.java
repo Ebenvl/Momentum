@@ -30,7 +30,9 @@ public class Database {
 
         // How long to wait for MySQL before giving up, in milliseconds.
         // If MySQL is not running, this is how long until the error appears.
-        hikari.setConnectionTimeout(5000);
+        // 30 seconds, because on the free hosting the first secure (SSL)
+        // connection to the online database can take longer than 5 seconds.
+        hikari.setConnectionTimeout(30000);
 
         this.dataSource = new HikariDataSource(hikari);
     }

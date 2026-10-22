@@ -21,6 +21,7 @@ No passwords go in any file. Render keeps them as secret environment settings, a
    - Stop the backend on the laptop.
    - On the **laptop** connection: **Server**, **Data Export**. Tick `momentum`, choose **Dump Structure and Data** and **Export to Self-Contained File**, and untick **Include Create Schema**. Start the export.
    - On the **Aiven** connection: **Server**, **Data Import**. Choose **Import from Self-Contained File**, pick the file, set **Default Target Schema** to `momentum`, and start the import.
+   - MySQL on Windows saves table names in lowercase, and Aiven runs on Linux, where `users` and `Users` are different tables. Run `SHOW TABLES FROM momentum;` on Aiven. If the names are lowercase, rename each one to its name in `02_schema.sql` with `RENAME TABLE momentum.users TO momentum.Users, ...`.
    - For an empty database instead, run `02_schema.sql` and then `05_extras.sql` on the Aiven connection.
 
 ## 2. The backend on Render
