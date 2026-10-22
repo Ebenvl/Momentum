@@ -34,11 +34,12 @@ import java.util.concurrent.Executors;
 // Talks to the Momentum backend over HTTP and JSON.
 public class RealMomentumApi implements MomentumApi {
 
-    // The backend on the laptop. For a phone plugged in with USB, run this once
-    // on the laptop so the phone's localhost goes to the laptop:
+    // The hosted backend on Render. The free server sleeps after 15 minutes
+    // without requests, so the first one after that can take up to a minute.
+    // To test against the backend on the laptop instead, use
+    // "http://localhost:7070" and run this once with the phone plugged in:
     //     adb reverse tcp:7070 tcp:7070
-    // Later this becomes the hosted backend's address.
-    private static final String BASE_URL = "http://localhost:7070";
+    private static final String BASE_URL = "https://momentum-backend-jix0.onrender.com";
 
     // Android does not allow network calls on the screen's thread, so they run
     // in the background, and the result is handed back to the screen's thread.

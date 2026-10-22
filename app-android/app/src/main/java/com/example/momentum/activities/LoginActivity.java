@@ -97,6 +97,10 @@ public class LoginActivity extends BaseActivity {
                     public void onError(String errorMessage) {
                         setLoading(false);
                         Session.logout();
+                        // Forget the old saved login, so the password login after this
+                        // offers to turn fingerprint login on again with a fresh one.
+                        BiometricLogin.disable(LoginActivity.this);
+                        findViewById(R.id.btnBiometric).setVisibility(View.GONE);
                         Toast.makeText(LoginActivity.this,
                                 "Your saved login ran out. Log in with your password once.",
                                 Toast.LENGTH_LONG).show();
