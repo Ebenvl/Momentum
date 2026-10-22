@@ -63,7 +63,10 @@ public class App {
         // the backend stops here with a clear message.
         Config config = new Config();
         Database database = new Database(config);
-        int port = config.getInt("server.port");
+        // Hosting services choose the port and give it in PORT. On a laptop it's server.port.
+        int port = System.getenv("PORT") != null
+                ? Integer.parseInt(System.getenv("PORT"))
+                : config.getInt("server.port");
 
         // Repositories read and save data, one per table (or pair of tables).
         UserRepository userRepository = new UserRepository(database);
@@ -299,8 +302,12 @@ public class App {
 
         // Back up the database once a day. It checks every hour, and only backs up
         // if there is no backup for today yet, so a restart doesn't make extra ones.
-        BackupService backupService = new BackupService(config, activityLogRepository);
-        scheduler.scheduleAtFixedRate(backupService::backupIfDue, 1, 60, TimeUnit.MINUTES);
+        // Turned off on a hosting service (backup.enabled=false), where the database
+        // service makes its own backups and there's no mysqldump.
+        if (!"false".equalsIgnoreCase(config.getOptional("backup.enabled"))) {
+            BackupService backupService = new BackupService(config, activityLogRepository);
+            scheduler.scheduleAtFixedRate(backupService::backupIfDue, 1, 60, TimeUnit.MINUTES);
+        }
     }
 
     // How often the scheduled sync runs.

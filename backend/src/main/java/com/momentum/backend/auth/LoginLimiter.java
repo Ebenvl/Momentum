@@ -20,6 +20,7 @@ public class LoginLimiter {
     public static final int MAX_PER_EMAIL = 5;
     public static final int MAX_PER_IP = 30;
     private static final Duration WINDOW = Duration.ofMinutes(5);
+    private static final int MAX_TRACKED = 10_000;
 
     // For each email or IP, the times of its recent failed logins.
     private final Map<String, Deque<Instant>> failures = new HashMap<>();
@@ -31,6 +32,12 @@ public class LoginLimiter {
     }
 
     public synchronized void recordFailure(String key) {
+        // Someone sending endless made-up emails could otherwise fill the memory.
+        // Past this size, everything older than the time window is thrown away.
+        if (failures.size() > MAX_TRACKED) {
+            Instant cutoff = Instant.now().minus(WINDOW);
+            failures.values().removeIf(times -> times.isEmpty() || times.peekLast().isBefore(cutoff));
+        }
         failures.computeIfAbsent(key, k -> new ArrayDeque<>()).addLast(Instant.now());
     }
 

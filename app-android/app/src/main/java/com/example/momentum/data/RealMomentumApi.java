@@ -694,8 +694,10 @@ public class RealMomentumApi implements MomentumApi {
         HttpURLConnection connection = (HttpURLConnection) new URL(BASE_URL + path).openConnection();
         try {
             connection.setRequestMethod(method);
-            connection.setConnectTimeout(10000);
-            connection.setReadTimeout(10000);
+            // The hosted backend sleeps when nobody uses it, and the first request
+            // wakes it up, which takes up to a minute. So it waits that long.
+            connection.setConnectTimeout(20000);
+            connection.setReadTimeout(75000);
             if (Session.getToken() != null) {
                 connection.setRequestProperty("Authorization", "Bearer " + Session.getToken());
             }

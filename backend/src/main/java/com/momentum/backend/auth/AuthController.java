@@ -22,6 +22,10 @@ public class AuthController {
     private final ActivityLogRepository activityLogRepository;
     private final SyncService syncService;
     private final LoginLimiter loginLimiter = new LoginLimiter();
+
+    // A real BCrypt hash of a random password nobody knows, only used to make
+    // logins with an unknown email take the same time as a wrong password.
+    private static final String TIMING_HASH = BCrypt.hashpw("not-a-real-password", BCrypt.gensalt());
     private final CodeService codeService;
 
     public AuthController(UserRepository userRepository, TokenService tokenService,
@@ -142,6 +146,10 @@ public class AuthController {
             // Same message for a wrong email and a wrong password, so nobody
             // can use login to find out which emails are registered.
             if (user == null) {
+                // Checks the password against a made-up hash anyway, so an unknown email
+                // takes as long as a wrong password. Otherwise the time taken would show
+                // which emails have accounts.
+                BCrypt.checkpw(request.password, TIMING_HASH);
                 loginLimiter.recordFailure(emailKey);
                 loginLimiter.recordFailure(ipKey);
                 activityLogRepository.log(null, "failed login: unknown email", "warning");

@@ -6,49 +6,55 @@ import java.io.InputStream;
 import java.util.Properties;
 
 /**
- * Loads the backend's settings from config.properties.
+ * Loads the backend's settings.
  *
- * Settings like the database password are kept in a separate file,
- * not in the code, so they never get committed to GitHub.
- * config.properties sits in the backend folder and is ignored by Git.
+ * On a laptop they come from config.properties in the backend folder, which is
+ * ignored by Git. On a hosting service they come from its secret environment
+ * settings instead, so no password is ever saved in a file on the server.
+ *
+ * Each setting can come from either place. The environment name is the same
+ * name in capitals with underscores: db.password becomes DB_PASSWORD.
+ * config.properties wins if both have it.
  */
 public class Config {
 
     private final Properties properties = new Properties();
 
-    /**
-     * Reads config.properties from the folder the backend is run from.
-     * Stops with a clear message if the file is missing, so it is obvious
-     * what to fix instead of failing later with a confusing error.
-     */
+    /** Reads config.properties if it's there. Without it, everything comes from the environment. */
     public Config() {
         try (InputStream input = new FileInputStream("config.properties")) {
             properties.load(input);
         } catch (IOException e) {
-            throw new IllegalStateException(
-                "Could not find config.properties in the backend folder. "
-                + "Copy config.example.properties, rename it to config.properties, "
-                + "and fill in your database password.", e);
+            System.out.println("No config.properties, using environment settings");
         }
     }
 
     /** Returns a setting, or stops with a clear message if it is missing. */
     public String get(String key) {
-        String value = properties.getProperty(key);
-        if (value == null || value.isBlank()) {
-            throw new IllegalStateException("Missing setting in config.properties: " + key);
+        String value = getOptional(key);
+        if (value == null) {
+            throw new IllegalStateException("Missing setting: " + key + " (in config.properties, or "
+                    + environmentName(key) + " in the environment)");
         }
-        return value.trim();
+        return value;
     }
 
-    /** Returns a setting, or null if it isn't in config.properties. For optional settings. */
+    /** Returns a setting, or null if it isn't set anywhere. For optional settings. */
     public String getOptional(String key) {
         String value = properties.getProperty(key);
+        if (value == null || value.isBlank()) {
+            value = System.getenv(environmentName(key));
+        }
         return value == null || value.isBlank() ? null : value.trim();
     }
 
     /** Returns a setting as a whole number, for example the port. */
     public int getInt(String key) {
         return Integer.parseInt(get(key));
+    }
+
+    // db.password becomes DB_PASSWORD
+    private static String environmentName(String key) {
+        return key.toUpperCase().replace('.', '_');
     }
 }

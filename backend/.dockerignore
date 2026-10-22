@@ -1,0 +1,7 @@
+# Never copied into the Docker image: local settings with real passwords,
+# backups with every account in them, and build output.
+config.properties
+backups/
+build/
+bin/
+.gradle/
