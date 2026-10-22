@@ -83,7 +83,6 @@ public class MainActivity extends BaseActivity {
     private static final int NAVY = Color.rgb(7, 59, 76);
     private static final int DEEP_NAVY = Color.rgb(7, 29, 53);
     private static final int PURPLE = Color.rgb(118, 102, 232);
-    private static final int LIGHT_PURPLE = Color.rgb(146, 132, 255);
     private static final int TEAL = Color.rgb(53, 184, 165);
     private static final int TEAL_DARK = Color.rgb(14, 140, 124);
     private static final int TEAL_BG = Color.rgb(222, 246, 241);
@@ -107,9 +106,6 @@ public class MainActivity extends BaseActivity {
     private String courseFilter = "All";
     private String searchQuery = "";
     private String selectedPeriod = "Monthly";
-    private String courseTab = "Overview";
-    private String selectedModule = "";
-    private Course selectedCourse;
     private final ArrayList<Course> courses = new ArrayList<>();
     private final ArrayList<Goal> goals = new ArrayList<>();
     private final ArrayList<LeaderEntry> leaderboard = new ArrayList<>();
@@ -154,12 +150,9 @@ public class MainActivity extends BaseActivity {
     private int longestStreak = 0;
 
     private static class Course {
-        String title = "", instructor = "", description = "", status = "New";
+        String title = "", status = "New";
         String completedOn = "";
-        int xp, enrolled;
-        float rating;
-        ArrayList<String> outcomes = new ArrayList<>();
-        ArrayList<String> modules = new ArrayList<>();
+        int xp;
 
 
         // From LearnTech, for the course list and the course page.
@@ -190,7 +183,6 @@ public class MainActivity extends BaseActivity {
     private static class LeaderEntry {
         String name = "";
         int xp;
-        int trend;
         boolean you;
     }
 
@@ -243,7 +235,6 @@ public class MainActivity extends BaseActivity {
         getOnBackPressedDispatcher().addCallback(this, new OnBackPressedCallback(true) {
             @Override public void handleOnBackPressed() {
                 switch (currentScreen) {
-                    case "lesson": showCourseDetails(); break;
                     case "courseDetails": showStudentTab("Courses"); break;
                     default:
                         if (!"Home".equals(currentTab)) showStudentTab("Home");
@@ -651,12 +642,12 @@ public class MainActivity extends BaseActivity {
         p.content.addView(new View(this), new LinearLayout.LayoutParams(1, dp(18)));
         addHeading(p.content, "More For You");
         LinearLayout more = card(p);
-        addButton(more, "Achievements", false, v -> openScreen(AchievementsActivity.class));
-        addButton(more, "Momentum Map", true, v -> openScreen(MomentumMapActivity.class));
-        addButton(more, "Study Timetable", true, v -> openScreen(StudyTimetableActivity.class));
-        addButton(more, "Reminders", true, v -> openScreen(RemindersActivity.class));
+
+
+        // The coaches suggest what to do next, so they stay on Home. Achievements and
+        // the Momentum Map moved to Profile, the timetable to Goals, reminders to Settings.
+        addButton(more, "Momentum Coach", false, v -> openScreen(MomentumCoachActivity.class));
         addButton(more, "Study Coach", true, v -> openScreen(StudyCoachActivity.class));
-        addButton(more, "Momentum Coach", true, v -> openScreen(MomentumCoachActivity.class));
 
         showPage(p.root, false);
     }
@@ -772,8 +763,7 @@ public class MainActivity extends BaseActivity {
 
         for (Course c : courses) {
             if (!"All".equals(courseFilter) && !courseFilter.equals(c.status)) continue;
-            if (!q.isEmpty() && !c.title.toLowerCase(Locale.ROOT).contains(q)
-                    && !c.instructor.toLowerCase(Locale.ROOT).contains(q)) continue;
+            if (!q.isEmpty() && !c.title.toLowerCase(Locale.ROOT).contains(q)) continue;
             LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(-1, -2);
             lp.bottomMargin = dp(12);
             list.addView(courseRow(c), lp);
@@ -801,7 +791,7 @@ public class MainActivity extends BaseActivity {
             LinearLayout empty = cardIn(list);
             boolean none = courses.isEmpty();
             addText(empty, none ? "No courses available yet" : "No courses found", DEEP_NAVY, 17, true);
-            addText(empty, none ? "Courses will appear here when course data is connected."
+            addText(empty, none ? "Your courses show here once they come through from LearnTech."
                     : "Try a different search or filter.", MUTED, 14, false);
         }
     }
@@ -822,9 +812,8 @@ public class MainActivity extends BaseActivity {
         info.addView(text(c.title, DEEP_NAVY, 15, true));
 
 
-        // LearnTech has no instructors, so the course's state goes there instead.
-        String subtitle = !c.instructor.isEmpty() ? "INSTRUCTOR: " + c.instructor.toUpperCase(Locale.getDefault())
-                : c.notEnrolled ? "NOT ENROLLED"
+        // The course's state under its name, since LearnTech has no instructors.
+        String subtitle = c.notEnrolled ? "NOT ENROLLED"
                 : "New".equals(c.status) ? "NOT STARTED"
                 : c.status.toUpperCase(Locale.getDefault());
         TextView inst = text(subtitle, MUTED, 11, true);
@@ -848,6 +837,12 @@ public class MainActivity extends BaseActivity {
 
     private void showGoals() {
         Page p = createPage("My Goals", "Stay accountable with personalized learning milestones", false);
+
+
+        // The weekly study timetable sits with the goals, since both are about planning.
+        LinearLayout plan = card(p);
+        addText(plan, "Plan when you'll study each week, and stick to it.", MUTED, 13, false);
+        addButton(plan, "Study timetable", false, v -> openScreen(StudyTimetableActivity.class));
 
         ArrayList<Goal> active = new ArrayList<>();
         ArrayList<Goal> done = new ArrayList<>();
@@ -1296,10 +1291,6 @@ public class MainActivity extends BaseActivity {
         LinearLayout.LayoutParams infoLp = new LinearLayout.LayoutParams(0, -2, 1f);
         infoLp.leftMargin = dp(12);
         row.addView(info, infoLp);
-
-        String trendIcon = e.trend > 0 ? "up" : e.trend < 0 ? "down" : "dash";
-        int trendColor = e.trend > 0 ? TEAL : e.trend < 0 ? ORANGE : MUTED;
-        row.addView(iconView(trendIcon, trendColor, 18));
         return row;
     }
 
@@ -1329,6 +1320,8 @@ public class MainActivity extends BaseActivity {
             if (Boolean.FALSE.equals(linked)) {
                 addText(numbers, "Not linked to LearnTech yet, so course points can't be earned.", MUTED, 12, false);
             }
+            addButton(numbers, "Achievements and badges", false, v -> openScreen(AchievementsActivity.class));
+            addButton(numbers, "Momentum Map", true, v -> openScreen(MomentumMapActivity.class));
         } else {
             addText(c, "Sign in or create an account to access your learning profile.", MUTED, 14, false);
             addButton(c, "Log in", false, v -> startActivity(new Intent(this, LoginActivity.class)));
@@ -1616,13 +1609,8 @@ public class MainActivity extends BaseActivity {
     }
 
   //Course details
-    private void showCourseDetails() {
-        showCourseDetails(selectedCourse);
-    }
-
     private void showCourseDetails(Course c) {
         currentScreen = "courseDetails";
-        selectedCourse = c;
         checkTab(TAB_COURSES);
 
         Page p = createPage(null, null, false);
@@ -1638,104 +1626,13 @@ public class MainActivity extends BaseActivity {
         heroLp.bottomMargin = dp(14);
         p.content.addView(hero, heroLp);
 
-        if (c != null && c.rating > 0) {
-            LinearLayout ratingRow = new LinearLayout(this);
-            ratingRow.setOrientation(LinearLayout.HORIZONTAL);
-            ratingRow.setGravity(Gravity.CENTER_VERTICAL);
-            ratingRow.addView(iconView("star", GOLD, 16));
-            String r = String.format(Locale.getDefault(), "%.1f", c.rating)
-                    + (c.enrolled > 0 ? "  \u2022  (" + String.format(Locale.getDefault(), "%,d", c.enrolled) + " learners enrolled)" : "");
-            TextView rt = text(r, WHITE, 13, false);
-            rt.setPadding(dp(6), 0, 0, 0);
-            ratingRow.addView(rt);
-            LinearLayout.LayoutParams rLp = new LinearLayout.LayoutParams(-1, -2);
-            rLp.bottomMargin = dp(6);
-            p.content.addView(ratingRow, rLp);
-        }
         TextView title = text(c == null ? "Course details" : c.title, WHITE, 24, true);
         p.content.addView(title, new LinearLayout.LayoutParams(-1, -2));
-        if (c != null && !c.instructor.isEmpty()) {
-            TextView inst = text("Instructor: " + c.instructor, Color.argb(225, 255, 255, 255), 14, false);
-            inst.setPadding(0, dp(4), 0, 0);
-            p.content.addView(inst, new LinearLayout.LayoutParams(-1, -2));
-        }
 
-        // Tabs
-        LinearLayout tabs = new LinearLayout(this);
-        tabs.setOrientation(LinearLayout.HORIZONTAL);
-        for (String name : new String[]{"Overview"}) {
-            boolean sel = courseTab.equals(name);
-            LinearLayout tab = new LinearLayout(this);
-            tab.setOrientation(LinearLayout.VERTICAL);
-            TextView label = text(name, sel ? LIGHT_PURPLE : WHITE, 14, true);
-            label.setGravity(Gravity.CENTER);
-            label.setPadding(0, dp(12), 0, dp(10));
-            tab.addView(label, new LinearLayout.LayoutParams(-1, -2));
-            View underline = new View(this);
-            underline.setBackgroundColor(sel ? LIGHT_PURPLE : Color.TRANSPARENT);
-            tab.addView(underline, new LinearLayout.LayoutParams(-1, dp(3)));
-            tab.setOnClickListener(v -> { courseTab = name; showCourseDetails(selectedCourse); });
-            tabs.addView(tab, new LinearLayout.LayoutParams(0, -2, 1f));
-        }
-        LinearLayout.LayoutParams tabsLp = new LinearLayout.LayoutParams(-1, -2);
-        tabsLp.topMargin = dp(16);
-        p.content.addView(tabs, tabsLp);
-        View baseline = new View(this);
-        baseline.setBackgroundColor(Color.argb(70, 255, 255, 255));
-        LinearLayout.LayoutParams baseLp = new LinearLayout.LayoutParams(-1, dp(1));
-        baseLp.bottomMargin = dp(16);
-        p.content.addView(baseline, baseLp);
-
-        int softWhite = Color.argb(225, 255, 255, 255);
-        if ("Modules".equals(courseTab)) {
-            addHeading(p.content, "Modules");
-            if (c == null || c.modules.isEmpty()) {
-                addText(p.content, "Course modules will appear here when data is available.", softWhite, 14, false);
-            } else {
-                for (String module : c.modules) {
-                    TextView row = text(module, WHITE, 14, true);
-                    row.setPadding(dp(16), dp(14), dp(16), dp(14));
-                    row.setBackground(rounded(Color.argb(45, 255, 255, 255), 14));
-                    LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(-1, -2);
-                    lp.bottomMargin = dp(10);
-                    p.content.addView(row, lp);
-                    row.setOnClickListener(v -> showLesson(module));
-                }
-            }
-        } else if ("Discussion".equals(courseTab)) {
-            addHeading(p.content, "Discussion");
-            addText(p.content, "Course discussion will appear here when it is connected.", softWhite, 14, false);
-        } else if (c != null && c.description.isEmpty() && c.outcomes.isEmpty()) {
-
-
-            // LearnTech sends no description or learning outcomes, so show what it does send.
+        // The course's details from LearnTech: status, time, points and dates
+        p.content.addView(new View(this), new LinearLayout.LayoutParams(1, dp(16)));
+        if (c != null) {
             addCourseDetails(p.content, c);
-        } else {
-            addHeading(p.content, "Course Description");
-            addText(p.content, c == null || c.description.isEmpty()
-                    ? "Course information will appear here when course data is connected."
-                    : c.description, softWhite, 14, false);
-            View gap = new View(this);
-            p.content.addView(gap, new LinearLayout.LayoutParams(1, dp(10)));
-            addHeading(p.content, "What You'll Learn");
-            if (c == null || c.outcomes.isEmpty()) {
-                addText(p.content, "Learning outcomes will appear here when data is available.", softWhite, 14, false);
-            } else {
-                for (String outcome : c.outcomes) {
-                    LinearLayout row = new LinearLayout(this);
-                    row.setOrientation(LinearLayout.HORIZONTAL);
-                    ImageView box = iconView("check", WHITE, 22);
-                    box.setBackground(rounded(TEAL, 6));
-                    box.setPadding(dp(3), dp(3), dp(3), dp(3));
-                    row.addView(box, new LinearLayout.LayoutParams(dp(22), dp(22)));
-                    LinearLayout.LayoutParams tLp = new LinearLayout.LayoutParams(0, -2, 1f);
-                    tLp.leftMargin = dp(12);
-                    row.addView(text(outcome, WHITE, 14, false), tLp);
-                    LinearLayout.LayoutParams rowLp = new LinearLayout.LayoutParams(-1, -2);
-                    rowLp.bottomMargin = dp(12);
-                    p.content.addView(row, rowLp);
-                }
-            }
         }
 
         // Pinned gradient button
@@ -1749,17 +1646,12 @@ public class MainActivity extends BaseActivity {
         ctaLp.setMargins(dp(20), 0, dp(20), dp(20));
         p.root.addView(cta, ctaLp);
         cta.setOnClickListener(v -> {
-            if (selectedCourse != null && !selectedCourse.modules.isEmpty()) {
-                showLesson(selectedCourse.modules.get(0));
-            } else {
-                recordStudyStreak();
+            recordStudyStreak();
 
-
-                // The course itself is on the learning platform, so open it inside the app.
-                Intent learnTech = new Intent(MainActivity.this, LearnTechActivity.class);
-                learnTech.putExtra(LearnTechActivity.EXTRA_URL, LMS_URL);
-                startActivity(learnTech);
-            }
+            // The course itself is on the learning platform, so open it inside the app.
+            Intent learnTech = new Intent(MainActivity.this, LearnTechActivity.class);
+            learnTech.putExtra(LearnTechActivity.EXTRA_URL, LMS_URL);
+            startActivity(learnTech);
         });
 
         // A completed course has a certificate
@@ -1849,23 +1741,6 @@ public class MainActivity extends BaseActivity {
         streakDays = streak;
         Toast.makeText(this, "Study streak: " + streak + " days!", Toast.LENGTH_LONG).show();
     }
-
-    private void showLesson(String module) {
-        currentScreen = "lesson";
-        selectedModule = module;
-        Page p = createPage("Lesson", null, false);
-        addBack(p.content, "Back to course", v -> showCourseDetails());
-        LinearLayout c = card(p);
-        addText(c, selectedModule, DEEP_NAVY, 20, true);
-        addText(c, "Lesson content will appear here when course data is connected.", MUTED, 13, false);
-        LinearLayout resources = card(p);
-        addText(resources, "Resources", DEEP_NAVY, 16, true);
-        addText(resources, "No resources available yet.", MUTED, 13, false);
-        addButton(p.content, "Previous lesson", true, v -> message("Previous lesson", "Lesson navigation will be connected to course data."));
-        addButton(p.content, "Next lesson", false, v -> message("Next lesson", "Lesson navigation will be connected to course data."));
-        showPage(p.root, true);
-    }
-
 
     // Progress ring (Home)
 

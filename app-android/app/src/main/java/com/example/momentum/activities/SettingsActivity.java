@@ -1,6 +1,7 @@
 package com.example.momentum.activities;
 
 import android.app.AlertDialog;
+import android.content.Intent;
 import android.graphics.Color;
 import android.graphics.Typeface;
 import android.os.Bundle;
@@ -94,6 +95,7 @@ public class SettingsActivity extends BaseActivity {
         addPasswordSection();
         addTwoStepSection();
         addFingerprintSection();
+        addRemindersSection();
         addAppearanceSection();
     }
 
@@ -294,6 +296,15 @@ public class SettingsActivity extends BaseActivity {
                 });
             }
         }));
+    }
+
+    // -----------------------------------------------------
+    // Reminders: the daily study reminder, on this phone
+    // -----------------------------------------------------
+    private void addRemindersSection() {
+        LinearLayout card = section("Reminders");
+        card.addView(label("A daily reminder on this phone, at a time you choose."));
+        card.addView(button("Set up reminders", () -> startActivity(new Intent(this, RemindersActivity.class))));
     }
 
     // -----------------------------------------------------
