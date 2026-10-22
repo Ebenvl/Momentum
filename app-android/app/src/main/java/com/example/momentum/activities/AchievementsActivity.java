@@ -1,7 +1,6 @@
 
 package com.example.momentum.activities;
 
-import android.content.SharedPreferences;
 import android.os.Bundle;
 import android.util.Log;
 import android.view.View;
@@ -23,11 +22,7 @@ import com.example.momentum.service.CourseService;
 import com.example.momentum.service.GoalService;
 import com.example.momentum.service.ProfileService;
 
-import java.text.SimpleDateFormat;
-import java.util.Calendar;
-import java.util.Date;
 import java.util.List;
-import java.util.Locale;
 
 public class AchievementsActivity extends BaseActivity {
 
@@ -55,8 +50,6 @@ public class AchievementsActivity extends BaseActivity {
     private int completedGoals = 0;
     private int overallProgress = 0;
 
-    private SharedPreferences streakPreferences;
-    private int studyStreak = 0;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -88,12 +81,6 @@ public class AchievementsActivity extends BaseActivity {
 
         userId = Session.getUser().id;
 
-        streakPreferences = getSharedPreferences(
-                "StudyStreakPrefs_" + userId,
-                MODE_PRIVATE
-        );
-
-        loadStudyStreak();
         loadAchievements();
 
 
@@ -130,10 +117,12 @@ public class AchievementsActivity extends BaseActivity {
                 list.removeAllViews();
                 none.setVisibility(badges.isEmpty() ? View.VISIBLE : View.GONE);
 
-                // One card per badge, in the same style as the cards above
+                // One card per badge, in the same style as the cards above.
+                // Secret badges (easter eggs) get an egg instead of a medal.
                 for (Badge badge : badges) {
                     TextView card = new TextView(AchievementsActivity.this);
-                    String text = "🏅 " + badge.name + "  +" + badge.pointsAwarded + " XP";
+                    String text = (badge.isHidden ? "🥚 Secret: " : "🏅 ") + badge.name
+                            + "  +" + badge.pointsAwarded + " XP";
                     if (badge.description != null && !badge.description.isEmpty()) {
                         text += "\n" + badge.description;
                     }
@@ -153,6 +142,28 @@ public class AchievementsActivity extends BaseActivity {
             @Override
             public void onError(String error) {
                 Log.e(TAG, "Could not load badges: " + error);
+            }
+        });
+
+        // How many secret badges are still hidden, as a hint to go exploring
+        profileService.getSecrets(new ApiCallback<int[]>() {
+            @Override
+            public void onSuccess(int[] counts) {
+                if (counts[1] == 0) {
+                    return;
+                }
+                TextView secrets = new TextView(AchievementsActivity.this);
+                secrets.setText("🥚 Secret achievements: " + counts[0] + " of " + counts[1] + " found"
+                        + (counts[0] < counts[1] ? ". Explore the app to find the rest!" : ". You found them all!"));
+                secrets.setTextColor(getResources().getColor(R.color.ltm_muted));
+                secrets.setTextSize(13);
+                secrets.setPadding(0, Math.round(12 * getResources().getDisplayMetrics().density), 0, 0);
+                list.addView(secrets, 0);
+            }
+
+            @Override
+            public void onError(String error) {
+                Log.e(TAG, "Could not load secrets: " + error);
             }
         });
     }
@@ -291,45 +302,4 @@ public class AchievementsActivity extends BaseActivity {
         }
     }
 
-    private void loadStudyStreak() {
-        String today = new SimpleDateFormat(
-                "yyyy-MM-dd",
-                Locale.getDefault()
-        ).format(new Date());
-
-        String lastStudyDate = streakPreferences.getString(
-                "lastStudyDate", ""
-        );
-
-        studyStreak = streakPreferences.getInt("studyStreak", 0);
-
-        if (!today.equals(lastStudyDate)
-                && !isYesterday(lastStudyDate)
-                && !lastStudyDate.isEmpty()) {
-
-            studyStreak = 0;
-
-            streakPreferences.edit()
-                    .putInt("studyStreak", 0)
-                    .apply();
-        }
-
-        tvStudyStreak.setText("🔥 Study streak: " + studyStreak + " days");
-    }
-
-    private boolean isYesterday(String dateString) {
-        if (dateString == null || dateString.isEmpty()) {
-            return false;
-        }
-
-        Calendar calendar = Calendar.getInstance();
-        calendar.add(Calendar.DAY_OF_YEAR, -1);
-
-        String yesterday = new SimpleDateFormat(
-                "yyyy-MM-dd",
-                Locale.getDefault()
-        ).format(calendar.getTime());
-
-        return yesterday.equals(dateString);
-    }
 }

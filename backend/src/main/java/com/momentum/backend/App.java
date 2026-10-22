@@ -12,6 +12,7 @@ import com.momentum.backend.config.Config;
 import com.momentum.backend.config.Encryption;
 import com.momentum.backend.courses.CourseController;
 import com.momentum.backend.db.ActivityLogRepository;
+import com.momentum.backend.db.ActivityRepository;
 import com.momentum.backend.db.BadgeRepository;
 import com.momentum.backend.db.CheckInRepository;
 import com.momentum.backend.db.CourseRepository;
@@ -36,7 +37,9 @@ import com.momentum.backend.learntech.LearnTechClient;
 import com.momentum.backend.learntech.LearnTechException;
 import com.momentum.backend.profile.ProfileController;
 import com.momentum.backend.rewards.BadgeService;
+import com.momentum.backend.rewards.EasterEggService;
 import com.momentum.backend.rewards.GoalChecker;
+import com.momentum.backend.rewards.StreakService;
 import com.momentum.backend.sessions.StudySessionController;
 import com.momentum.backend.sync.SyncService;
 import io.javalin.Javalin;
@@ -76,6 +79,12 @@ public class App {
         StudySessionRepository studySessionRepository = new StudySessionRepository(database);
         StatsRepository statsRepository = new StatsRepository(database);
         ExportRepository exportRepository = new ExportRepository(database);
+        ActivityRepository activityRepository = new ActivityRepository(database);
+
+        // The streak (check-ins and learning time) and the easter eggs.
+        StreakService streakService = new StreakService(streakRepository, activityRepository);
+        EasterEggService easterEggService = new EasterEggService(badgeRepository, activityRepository,
+                pointsRepository, activityLogRepository);
 
         // Completes goals and awards badges, after a sync or a check-in.
         GoalChecker goalChecker = new GoalChecker(goalRepository, enrolmentRepository,
@@ -87,7 +96,8 @@ public class App {
         LearnTechClient learnTechClient = new LearnTechClient(config);
         SyncService syncService = new SyncService(learnTechClient, courseRepository,
                 userRepository, enrolmentRepository, snapshotRepository, pointsRepository,
-                activityLogRepository, streakRepository, goalChecker, badgeService);
+                activityLogRepository, streakRepository, goalChecker, badgeService,
+                streakService, activityRepository);
 
         // The admin's LearnTech settings, saved encrypted in the database.
         // If there are any, they are used instead of config.properties.
@@ -105,9 +115,10 @@ public class App {
         AuthController authController = new AuthController(userRepository, tokenService,
                 activityLogRepository, syncService, codeService);
         GoalController goalController = new GoalController(goalRepository, checkInRepository, courseRepository,
-                streakRepository, goalChecker, badgeService);
+                streakService, goalChecker, badgeService, easterEggService);
         ProfileController profileController = new ProfileController(userRepository, snapshotRepository, pointsRepository,
-                streakRepository, badgeRepository, codeService, activityLogRepository);
+                streakRepository, badgeRepository, codeService, activityLogRepository,
+                activityRepository, easterEggService);
         AdminController adminController = new AdminController(userRepository, courseRepository,
                 badgeRepository, activityLogRepository, statsRepository, exportRepository);
         CourseController courseController = new CourseController(courseRepository, enrolmentRepository);
@@ -199,6 +210,9 @@ public class App {
             javalinConfig.routes.post("/me/two-factor/disable", profileController::disableTwoFactor);
             javalinConfig.routes.get("/me/progress", profileController::getProgress);
             javalinConfig.routes.get("/me/badges", profileController::getBadges);
+            javalinConfig.routes.post("/me/events", profileController::recordEvent);
+            javalinConfig.routes.get("/me/active-days", profileController::getActiveDays);
+            javalinConfig.routes.get("/me/secrets", profileController::getSecrets);
 
             // -----------------------------------------------------
             // Courses (see courses/CourseController.java)

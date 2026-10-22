@@ -141,7 +141,7 @@ public class BadgeRepository {
 
         String sql = "SELECT Badges.badge_id, Badges.name, Badges.description, Badges.image_url, "
                    + "Badges.rule_type, Badges.rule_value, Badges.points_awarded, Badges.is_active, "
-                   + "UserBadges.awarded_at "
+                   + "Badges.is_hidden, UserBadges.awarded_at "
                    + "FROM UserBadges "
                    + "JOIN Badges ON Badges.badge_id = UserBadges.badge_id "
                    + "WHERE UserBadges.user_id = ? "
@@ -166,12 +166,62 @@ public class BadgeRepository {
                     badge.pointsAwarded = results.getInt("points_awarded");
                     badge.isActive = results.getBoolean("is_active");
                     badge.awardedAt = results.getString("awarded_at");
+                    badge.isHidden = results.getBoolean("is_hidden");
                     badges.add(badge);
                 }
             }
         }
 
         return badges;
+    }
+
+    // The secret badge with this rule type, like "secret_curious". Null if there is none.
+    public Badge findBadgeByRuleType(String ruleType) throws SQLException {
+
+        String sql = "SELECT badge_id, name, description, image_url, rule_type, rule_value, "
+                   + "points_awarded, is_active FROM Badges WHERE rule_type = ? LIMIT 1";
+
+        try (Connection connection = database.getConnection();
+             PreparedStatement statement = connection.prepareStatement(sql)) {
+
+            statement.setString(1, ruleType);
+
+            try (ResultSet results = statement.executeQuery()) {
+                if (!results.next()) {
+                    return null;
+                }
+                Badge badge = new Badge();
+                badge.badgeId = results.getInt("badge_id");
+                badge.name = results.getString("name");
+                badge.description = results.getString("description");
+                badge.imageUrl = results.getString("image_url");
+                badge.ruleType = results.getString("rule_type");
+                badge.ruleValue = results.getInt("rule_value");
+                badge.pointsAwarded = results.getInt("points_awarded");
+                badge.isActive = results.getBoolean("is_active");
+                return badge;
+            }
+        }
+    }
+
+    // How many secret badges there are, and how many this learner has found.
+    public int[] countSecrets(int userId) throws SQLException {
+
+        String sql = "SELECT COUNT(*) AS total, "
+                   + "SUM(EXISTS (SELECT 1 FROM UserBadges WHERE UserBadges.badge_id = Badges.badge_id "
+                   + "AND UserBadges.user_id = ?)) AS found "
+                   + "FROM Badges WHERE is_hidden = TRUE AND is_active = TRUE";
+
+        try (Connection connection = database.getConnection();
+             PreparedStatement statement = connection.prepareStatement(sql)) {
+
+            statement.setInt(1, userId);
+
+            try (ResultSet results = statement.executeQuery()) {
+                results.next();
+                return new int[]{results.getInt("found"), results.getInt("total")};
+            }
+        }
     }
 
     // The badges learners can currently earn.

@@ -58,6 +58,7 @@ import com.example.momentum.admin.AdminPanel;
 import com.example.momentum.model.Enrolment;
 import com.example.momentum.data.ApiCallback;
 import com.example.momentum.data.AppSettings;
+import com.example.momentum.data.EasterEggs;
 import com.example.momentum.data.Session;
 import com.example.momentum.model.LeaderboardEntry;
 import com.example.momentum.model.User;
@@ -73,9 +74,7 @@ import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
 import android.widget.Spinner;
 import java.util.Arrays;
-import java.util.HashSet;
 import java.util.List;
-import java.util.Set;
 
 public class MainActivity extends BaseActivity {
 
@@ -136,6 +135,9 @@ public class MainActivity extends BaseActivity {
     // Dark mode: the light cards and dark text swap to dark cards and light text.
     // Done in the colour helpers (rounded and text), so every screen follows.
     private boolean dark;
+
+    // Taps on the Home logo, for the Curious Mind easter egg.
+    private int logoTaps = 0;
 
     // The text size this screen was drawn with, to notice a change in Settings.
     private float appliedTextSize;
@@ -443,6 +445,16 @@ public class MainActivity extends BaseActivity {
                 LinearLayout.LayoutParams logoLp = new LinearLayout.LayoutParams(dp(56), dp(56));
                 logoLp.leftMargin = dp(12);
                 header.addView(logo, logoLp);
+
+
+                // Easter egg: tapping the logo 7 times unlocks a secret badge
+                logo.setOnClickListener(v -> {
+                    logoTaps++;
+                    if (logoTaps == 7) {
+                        logoTaps = 0;
+                        EasterEggs.report(this, EasterEggs.LOGO_TAPPED);
+                    }
+                });
             }
             content.addView(header, new LinearLayout.LayoutParams(-1, -2));
             content.addView(new View(this), new LinearLayout.LayoutParams(1, dp(18)));
@@ -659,6 +671,15 @@ public class MainActivity extends BaseActivity {
             startActivity(new Intent(this, LoginActivity.class));
             return;
         }
+
+
+        // For the Master Planner easter egg: the timetable and a coach on the same day
+        if (screen == StudyTimetableActivity.class) {
+            EasterEggs.report(this, EasterEggs.OPENED_TIMETABLE);
+        } else if (screen == MomentumCoachActivity.class || screen == StudyCoachActivity.class) {
+            EasterEggs.report(this, EasterEggs.OPENED_COACH);
+        }
+
         startActivity(new Intent(this, screen));
     }
 
@@ -1112,9 +1133,10 @@ public class MainActivity extends BaseActivity {
                     } catch (NumberFormatException e) {
                         // left empty, that's fine
                     }
-                    goalService.logCheckIn(g.id, noteText.isEmpty() ? null : noteText, value, new ApiCallback<Void>() {
-                        @Override public void onSuccess(Void result) {
+                    goalService.logCheckIn(g.id, noteText.isEmpty() ? null : noteText, value, new ApiCallback<List<String>>() {
+                        @Override public void onSuccess(List<String> unlocked) {
                             Toast.makeText(MainActivity.this, "Check-in logged", Toast.LENGTH_SHORT).show();
+                            EasterEggs.celebrate(MainActivity.this, unlocked);
                             loadGoals();
                             loadMe();
                         }
@@ -1646,9 +1668,8 @@ public class MainActivity extends BaseActivity {
         ctaLp.setMargins(dp(20), 0, dp(20), dp(20));
         p.root.addView(cta, ctaLp);
         cta.setOnClickListener(v -> {
-            recordStudyStreak();
-
             // The course itself is on the learning platform, so open it inside the app.
+            // Opening it doesn't count towards the streak, time spent learning in it does.
             Intent learnTech = new Intent(MainActivity.this, LearnTechActivity.class);
             learnTech.putExtra(LearnTechActivity.EXTRA_URL, LMS_URL);
             startActivity(learnTech);
@@ -1702,45 +1723,6 @@ public class MainActivity extends BaseActivity {
         parent.addView(row, lp);
     }
 
-    // Records today as a study day for the streak and the Momentum Map.
-    private void recordStudyStreak() {
-        if (!Session.isLoggedIn()) {
-            Toast.makeText(this, "Please log in to record your study streak.", Toast.LENGTH_SHORT).show();
-            return;
-        }
-
-        android.content.SharedPreferences preferences =
-                getSharedPreferences("StudyStreakPrefs_" + Session.getUser().id, MODE_PRIVATE);
-
-        String today = new SimpleDateFormat("yyyy-MM-dd", Locale.US).format(new Date());
-        String lastStudyDate = preferences.getString("lastStudyDate", "");
-        int streak = preferences.getInt("studyStreak", 0);
-
-        if (today.equals(lastStudyDate)) {
-            Toast.makeText(this, "Study activity recorded! Your streak is " + streak + " days.",
-                    Toast.LENGTH_SHORT).show();
-            return;
-        }
-
-        java.util.Calendar calendar = java.util.Calendar.getInstance();
-        calendar.add(java.util.Calendar.DAY_OF_YEAR, -1);
-        String yesterday = new SimpleDateFormat("yyyy-MM-dd", Locale.US).format(calendar.getTime());
-
-        if (yesterday.equals(lastStudyDate)) streak++;
-        else streak = 1;
-
-        Set<String> studyDates = new HashSet<>(preferences.getStringSet("studyDates", new HashSet<>()));
-        studyDates.add(today);
-
-        preferences.edit()
-                .putString("lastStudyDate", today)
-                .putInt("studyStreak", streak)
-                .putStringSet("studyDates", studyDates)
-                .apply();
-
-        streakDays = streak;
-        Toast.makeText(this, "Study streak: " + streak + " days!", Toast.LENGTH_LONG).show();
-    }
 
     // Progress ring (Home)
 

@@ -25,7 +25,8 @@ public class GoalService {
     }
 
     // Logs progress on a goal. Also counts towards the learner's streak.
-    public void logCheckIn(int goalId, String note, Integer valueLogged, ApiCallback<Void> callback) {
+    // Gives back the names of any easter eggs it unlocked.
+    public void logCheckIn(int goalId, String note, Integer valueLogged, ApiCallback<List<String>> callback) {
         api.logCheckIn(goalId, note, valueLogged, callback);
     }
 

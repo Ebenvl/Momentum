@@ -3,16 +3,19 @@ package com.momentum.backend.profile;
 import com.momentum.backend.auth.CodeService;
 import com.momentum.backend.auth.CurrentUser;
 import com.momentum.backend.db.ActivityLogRepository;
+import com.momentum.backend.db.ActivityRepository;
 import com.momentum.backend.db.BadgeRepository;
 import com.momentum.backend.db.PointsRepository;
 import com.momentum.backend.db.SnapshotRepository;
 import com.momentum.backend.db.StreakRepository;
 import com.momentum.backend.db.UserRepository;
 import com.momentum.backend.model.CodeRequest;
+import com.momentum.backend.model.EventRequest;
 import com.momentum.backend.model.PasswordRequest;
 import com.momentum.backend.model.ProfileRequest;
 import com.momentum.backend.model.Streak;
 import com.momentum.backend.model.User;
+import com.momentum.backend.rewards.EasterEggService;
 import io.javalin.http.Context;
 import org.mindrot.jbcrypt.BCrypt;
 
@@ -29,11 +32,14 @@ public class ProfileController {
     private final BadgeRepository badgeRepository;
     private final CodeService codeService;
     private final ActivityLogRepository activityLogRepository;
+    private final ActivityRepository activityRepository;
+    private final EasterEggService easterEggService;
 
     public ProfileController(UserRepository userRepository, SnapshotRepository snapshotRepository,
                              PointsRepository pointsRepository, StreakRepository streakRepository,
                              BadgeRepository badgeRepository, CodeService codeService,
-                             ActivityLogRepository activityLogRepository) {
+                             ActivityLogRepository activityLogRepository, ActivityRepository activityRepository,
+                             EasterEggService easterEggService) {
         this.userRepository = userRepository;
         this.snapshotRepository = snapshotRepository;
         this.pointsRepository = pointsRepository;
@@ -41,6 +47,8 @@ public class ProfileController {
         this.badgeRepository = badgeRepository;
         this.codeService = codeService;
         this.activityLogRepository = activityLogRepository;
+        this.activityRepository = activityRepository;
+        this.easterEggService = easterEggService;
     }
 
     // -----------------------------------------------------
@@ -284,6 +292,70 @@ public class ProfileController {
             userRepository.setTwoFactor(userId, false);
             activityLogRepository.log(userId, "two-step login turned off", "warning");
             ctx.json(Map.of("message", "two-step login is off"));
+        } catch (SQLException e) {
+            ctx.status(500).json(Map.of("error", "something went wrong, try again"));
+        }
+    }
+
+    // -----------------------------------------------------
+    // POST /me/events   something done in the app, for the easter eggs
+    // Gives back the names of any secret badges it unlocked.
+    // -----------------------------------------------------
+    public void recordEvent(Context ctx) {
+
+        Integer userId = CurrentUser.id(ctx);
+        if (userId == null) {
+            ctx.status(401).json(Map.of("error", "please log in"));
+            return;
+        }
+
+        String event;
+        try {
+            event = ctx.bodyAsClass(EventRequest.class).event;
+        } catch (Exception e) {
+            ctx.status(400).json(Map.of("error", "invalid request"));
+            return;
+        }
+
+        try {
+            ctx.json(Map.of("unlocked", easterEggService.recordEvent(userId, event == null ? "" : event)));
+        } catch (SQLException e) {
+            ctx.status(500).json(Map.of("error", "something went wrong, try again"));
+        }
+    }
+
+    // -----------------------------------------------------
+    // GET /me/active-days   every day that counted towards the streak
+    // -----------------------------------------------------
+    public void getActiveDays(Context ctx) {
+
+        Integer userId = CurrentUser.id(ctx);
+        if (userId == null) {
+            ctx.status(401).json(Map.of("error", "please log in"));
+            return;
+        }
+
+        try {
+            ctx.json(activityRepository.findActiveDays(userId));
+        } catch (SQLException e) {
+            ctx.status(500).json(Map.of("error", "something went wrong, try again"));
+        }
+    }
+
+    // -----------------------------------------------------
+    // GET /me/secrets   how many secret badges there are, and how many they found
+    // -----------------------------------------------------
+    public void getSecrets(Context ctx) {
+
+        Integer userId = CurrentUser.id(ctx);
+        if (userId == null) {
+            ctx.status(401).json(Map.of("error", "please log in"));
+            return;
+        }
+
+        try {
+            int[] counts = badgeRepository.countSecrets(userId);
+            ctx.json(Map.of("found", counts[0], "total", counts[1]));
         } catch (SQLException e) {
             ctx.status(500).json(Map.of("error", "something went wrong, try again"));
         }

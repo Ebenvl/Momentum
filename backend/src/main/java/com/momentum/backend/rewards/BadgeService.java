@@ -1,5 +1,6 @@
 package com.momentum.backend.rewards;
 
+import com.momentum.backend.config.AppClock;
 import com.momentum.backend.db.ActivityLogRepository;
 import com.momentum.backend.db.BadgeRepository;
 import com.momentum.backend.db.EnrolmentRepository;
@@ -8,7 +9,6 @@ import com.momentum.backend.db.StreakRepository;
 import com.momentum.backend.model.Badge;
 
 import java.sql.SQLException;
-import java.time.YearMonth;
 
 // Awards badges when a learner reaches a badge's rule.
 // Runs after every sync of a learner and after every check-in.
@@ -50,7 +50,7 @@ public class BadgeService {
 
                 if (isNew) {
                     pointsRepository.awardPoints(userId, badge.pointsAwarded, "badge_awarded",
-                            badge.badgeId, YearMonth.now().toString());
+                            badge.badgeId, AppClock.today().toString().substring(0, 7));
                     activityLogRepository.log(userId, "badge earned: " + badge.name, "info");
                 }
             }

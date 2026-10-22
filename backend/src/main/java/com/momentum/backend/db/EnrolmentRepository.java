@@ -54,6 +54,23 @@ public class EnrolmentRepository {
         }
     }
 
+    // Minutes the learner had spent in this course at the last sync. Null the first time.
+    public Integer findTimeSpent(int userId, int courseId) throws SQLException {
+
+        String sql = "SELECT time_spent_minutes FROM Enrolments WHERE user_id = ? AND course_id = ?";
+
+        try (Connection connection = database.getConnection();
+             PreparedStatement statement = connection.prepareStatement(sql)) {
+
+            statement.setInt(1, userId);
+            statement.setInt(2, courseId);
+
+            try (ResultSet results = statement.executeQuery()) {
+                return results.next() ? results.getInt(1) : null;
+            }
+        }
+    }
+
     // How many courses the learner has completed, for badge rules.
     public int countCompleted(int userId) throws SQLException {
 

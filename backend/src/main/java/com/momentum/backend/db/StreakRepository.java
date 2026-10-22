@@ -1,5 +1,6 @@
 package com.momentum.backend.db;
 
+import com.momentum.backend.config.AppClock;
 import com.momentum.backend.model.Streak;
 
 import java.sql.Connection;
@@ -54,7 +55,7 @@ public class StreakRepository {
         }
 
         LocalDate lastDay = LocalDate.parse(streak.lastActivityDate);
-        LocalDate today = LocalDate.now();
+        LocalDate today = AppClock.today();
         if (lastDay.equals(today) || lastDay.equals(today.minusDays(1))) {
             return streak.currentStreak;
         } else {

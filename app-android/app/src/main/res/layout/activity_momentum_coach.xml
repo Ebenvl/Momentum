@@ -1,7 +1,7 @@
 <ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="#F4F6FA"
+    android:background="@color/ltm_background"
     android:fillViewport="true">
 
     <LinearLayout
@@ -24,7 +24,7 @@
             android:layout_marginTop="8dp"
             android:layout_marginBottom="20dp"
             android:text="Your personal guide to smarter learning."
-            android:textColor="#687783"
+            android:textColor="@color/ltm_muted"
             android:textSize="15sp" />
 
         <LinearLayout
@@ -91,7 +91,7 @@
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:text="COURSES"
-                    android:textColor="#687783"
+                    android:textColor="@color/ltm_muted"
                     android:textSize="12sp" />
 
                 <TextView
@@ -108,7 +108,7 @@
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:text="Completed"
-                    android:textColor="#687783"
+                    android:textColor="@color/ltm_muted"
                     android:textSize="13sp" />
 
             </LinearLayout>
@@ -126,7 +126,7 @@
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:text="GOALS"
-                    android:textColor="#687783"
+                    android:textColor="@color/ltm_muted"
                     android:textSize="12sp" />
 
                 <TextView
@@ -143,7 +143,7 @@
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:text="Completed"
-                    android:textColor="#687783"
+                    android:textColor="@color/ltm_muted"
                     android:textSize="13sp" />
 
             </LinearLayout>
@@ -172,7 +172,7 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:text="Your next study recommendation will appear here."
-                android:textColor="#071D35"
+                android:textColor="@color/ltm_navy"
                 android:textSize="16sp" />
 
             <Button
@@ -191,7 +191,7 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="16dp"
-            android:backgroundTint="#EDEAFF"
+            android:backgroundTint="@color/ltm_blue_light"
             android:text="Refresh my recommendations"
             android:textColor="#7666E8" />
 

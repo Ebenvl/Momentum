@@ -706,7 +706,8 @@ public class AdminController {
         if (request.imageUrl != null && request.imageUrl.length() > 500) {
             return "image link can be at most 500 characters";
         }
-        if (request.ruleType == null || !BADGE_RULES.contains(request.ruleType)) {
+        if (request.ruleType == null
+                || (!BADGE_RULES.contains(request.ruleType) && !request.ruleType.startsWith("secret_"))) {
             return "rule must be courses_completed, streak_days or total_points";
         }
         if (request.ruleValue == null) {

@@ -1,7 +1,6 @@
 
 package com.example.momentum.activities;
 
-import android.content.SharedPreferences;
 import android.graphics.Color;
 import android.graphics.Typeface;
 import android.graphics.drawable.GradientDrawable;
@@ -15,12 +14,15 @@ import android.widget.Toast;
 
 
 import com.example.momentum.R;
+import com.example.momentum.data.ApiCallback;
 import com.example.momentum.data.Session;
+import com.example.momentum.model.User;
+import com.example.momentum.service.ProfileService;
 
 import java.text.SimpleDateFormat;
 import java.util.Calendar;
-import java.util.Date;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Locale;
 import java.util.Set;
 
@@ -37,7 +39,7 @@ public class MomentumMapActivity extends BaseActivity {
     private Button btnPreviousMonth;
     private Button btnNextMonth;
 
-    private SharedPreferences preferences;
+    private final ProfileService profileService = new ProfileService();
 
     private Set<String> studyDates = new HashSet<>();
 
@@ -79,14 +81,6 @@ public class MomentumMapActivity extends BaseActivity {
             finish();
             return;
         }
-
-        int userId = Session.getUser().id;
-
-        // Use the same preferences as the course details screen.
-        preferences = getSharedPreferences(
-                "StudyStreakPrefs_" + userId,
-                MODE_PRIVATE
-        );
 
         // Connect the XML views.
         btnBack = findViewById(R.id.btnBack);
@@ -135,67 +129,42 @@ public class MomentumMapActivity extends BaseActivity {
     protected void onResume() {
         super.onResume();
 
-        if (preferences != null) {
+        if (Session.isLoggedIn()) {
             refreshStudyData();
             renderCalendar();
         }
     }
 
-    // Load the saved study history and streak.
+    // Loads the days that counted towards the streak, and the streak itself,
+    // from the backend. A day counts for a check-in, or for enough time spent
+    // learning in a course on LearnTech that day.
     private void refreshStudyData() {
-
-        Set<String> savedDates = preferences.getStringSet(
-                "studyDates",
-                new HashSet<>()
-        );
-
-        // Always copy the saved set before using it.
-        studyDates = new HashSet<>(savedDates);
-
-        int streak = preferences.getInt("studyStreak", 0);
-
-        String lastStudyDate =
-                preferences.getString("lastStudyDate", "");
-
-        String today = dateKeyFormat.format(new Date());
-
-        // A streak is current only if the last study day
-        // was today or yesterday.
-        if (!lastStudyDate.isEmpty()
-                && !lastStudyDate.equals(today)) {
-
-            try {
-                Date lastDate = dateKeyFormat.parse(lastStudyDate);
-                Date todayDate = dateKeyFormat.parse(today);
-
-                if (lastDate != null && todayDate != null) {
-
-                    Calendar lastCalendar = Calendar.getInstance();
-                    lastCalendar.setTime(lastDate);
-
-                    Calendar todayCalendar = Calendar.getInstance();
-                    todayCalendar.setTime(todayDate);
-
-                    long difference = dayNumber(todayCalendar)
-                            - dayNumber(lastCalendar);
-
-                    if (difference > 1 || difference < 0) {
-                        streak = 0;
-                    }
-                }
-
-            } catch (Exception e) {
-                streak = 0;
+        profileService.getActiveDays(new ApiCallback<List<String>>() {
+            @Override
+            public void onSuccess(List<String> days) {
+                studyDates = new HashSet<>(days);
+                tvStudyDays.setText(days.size() + (days.size() == 1 ? " active day" : " active days"));
+                renderCalendar();
             }
-        }
 
-        tvStudyStreak.setText(
-                streak + (streak == 1 ? " day" : " days")
-        );
+            @Override
+            public void onError(String message) {
+                Toast.makeText(MomentumMapActivity.this, message, Toast.LENGTH_SHORT).show();
+            }
+        });
 
-        tvStudyDays.setText(
-                studyDates.size() + " recorded study days"
-        );
+        profileService.getMe(new ApiCallback<User>() {
+            @Override
+            public void onSuccess(User me) {
+                int streak = me.currentStreak != null ? me.currentStreak : 0;
+                tvStudyStreak.setText(streak + (streak == 1 ? " day" : " days"));
+            }
+
+            @Override
+            public void onError(String message) {
+                // Keeps the last streak shown
+            }
+        });
     }
 
     // Draw the monthly calendar.

@@ -11,6 +11,7 @@ public class Badge {
     public int ruleValue;
     public int pointsAwarded;
     public boolean isActive;
+    public boolean isHidden;    // a secret badge (easter egg), only shown once earned
     public String awardedAt;    // only filled in for a learner's own badges
 
 }

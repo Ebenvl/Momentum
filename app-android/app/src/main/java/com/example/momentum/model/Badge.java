@@ -10,4 +10,5 @@ public class Badge {
     public String ruleType;      // courses_completed, streak_days or total_points
     public int ruleValue;        // the number to reach
     public boolean isActive;     // only active badges can be earned
+    public boolean isHidden;     // a secret badge (easter egg)
 }

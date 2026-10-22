@@ -4,18 +4,17 @@ import com.momentum.backend.auth.CurrentUser;
 import com.momentum.backend.db.CheckInRepository;
 import com.momentum.backend.db.CourseRepository;
 import com.momentum.backend.db.GoalRepository;
-import com.momentum.backend.db.StreakRepository;
 import com.momentum.backend.model.CheckInRequest;
 import com.momentum.backend.model.Goal;
 import com.momentum.backend.model.GoalRequest;
 import com.momentum.backend.model.StatusRequest;
-import com.momentum.backend.model.Streak;
 import com.momentum.backend.rewards.BadgeService;
+import com.momentum.backend.rewards.EasterEggService;
 import com.momentum.backend.rewards.GoalChecker;
+import com.momentum.backend.rewards.StreakService;
 import io.javalin.http.Context;
 
 import java.sql.SQLException;
-import java.time.LocalDate;
 import java.util.List;
 import java.util.Map;
 
@@ -29,19 +28,22 @@ public class GoalController {
     private final GoalRepository goalRepository;
     private final CheckInRepository checkInRepository;
     private final CourseRepository courseRepository;
-    private final StreakRepository streakRepository;
+    private final StreakService streakService;
     private final GoalChecker goalChecker;
     private final BadgeService badgeService;
+    private final EasterEggService easterEggService;
 
     public GoalController(GoalRepository goalRepository, CheckInRepository checkInRepository,
-                          CourseRepository courseRepository, StreakRepository streakRepository,
-                          GoalChecker goalChecker, BadgeService badgeService) {
+                          CourseRepository courseRepository, StreakService streakService,
+                          GoalChecker goalChecker, BadgeService badgeService,
+                          EasterEggService easterEggService) {
         this.goalRepository = goalRepository;
         this.checkInRepository = checkInRepository;
         this.courseRepository = courseRepository;
-        this.streakRepository = streakRepository;
+        this.streakService = streakService;
         this.goalChecker = goalChecker;
         this.badgeService = badgeService;
+        this.easterEggService = easterEggService;
     }
 
     // -----------------------------------------------------
@@ -313,10 +315,12 @@ public class GoalController {
 
             boolean saved = checkInRepository.insertCheckIn(goalId, userId, request.note, request.valueLogged);
             if (saved) {
-                updateStreak(userId);
+                streakService.recordActiveDay(userId, "checkin");
                 goalChecker.checkGoals(userId);
                 badgeService.checkBadges(userId);
-                ctx.status(201).json(Map.of("message", "check-in logged"));
+                // Any easter eggs this check-in found, so the app can celebrate them
+                List<String> unlocked = easterEggService.afterCheckIn(userId);
+                ctx.status(201).json(Map.of("message", "check-in logged", "unlocked", unlocked));
             } else {
                 ctx.status(500).json(Map.of("error", "could not log check-in"));
             }
@@ -388,32 +392,4 @@ public class GoalController {
         }
     }
 
-    // Updates the learner's streak after a check-in.
-    private void updateStreak(int userId) throws SQLException {
-
-        LocalDate today = LocalDate.now();
-        Streak streak = streakRepository.findStreak(userId);
-
-        int current;
-        int longest;
-
-        if (streak == null || streak.lastActivityDate == null) {
-            current = 1;
-            longest = 1;
-        } else {
-            LocalDate lastDay = LocalDate.parse(streak.lastActivityDate);
-
-            if (lastDay.equals(today)) {
-                return;
-            } else if (lastDay.equals(today.minusDays(1))) {
-                current = streak.currentStreak + 1;
-            } else {
-                current = 1;
-            }
-
-            longest = Math.max(streak.longestStreak, current);
-        }
-
-        streakRepository.saveStreak(userId, current, longest, today.toString());
-    }
 }

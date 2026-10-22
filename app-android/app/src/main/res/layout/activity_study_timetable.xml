@@ -1,7 +1,7 @@
 <ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="#F4F6FA"
+    android:background="@color/ltm_background"
     android:fillViewport="true">
 
     <LinearLayout
@@ -23,7 +23,7 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:text="Plan your learning sessions and stay on track."
-            android:textColor="#687783"
+            android:textColor="@color/ltm_muted"
             android:textSize="15sp"
             android:layout_marginBottom="24dp" />
 
@@ -31,7 +31,7 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:text="Day of the week"
-            android:textColor="#071D35"
+            android:textColor="@color/ltm_navy"
             android:textStyle="bold" />
 
         <Spinner

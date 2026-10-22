@@ -2,7 +2,7 @@
 <ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="#F4F6FA"
+    android:background="@color/ltm_background"
     android:fillViewport="true">
 
     <LinearLayout
@@ -41,7 +41,7 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:text="CERTIFICATE OF COMPLETION"
-                android:textColor="#071D35"
+                android:textColor="@color/ltm_navy"
                 android:textStyle="bold"
                 android:textSize="20sp"
                 android:gravity="center"
@@ -51,7 +51,7 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:text="This certificate is proudly presented to"
-                android:textColor="#687783"
+                android:textColor="@color/ltm_muted"
                 android:textSize="14sp"
                 android:gravity="center" />
 
@@ -71,7 +71,7 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:text="for successfully completing"
-                android:textColor="#687783"
+                android:textColor="@color/ltm_muted"
                 android:textSize="14sp"
                 android:gravity="center" />
 
@@ -80,7 +80,7 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:text="Course Name"
-                android:textColor="#071D35"
+                android:textColor="@color/ltm_navy"
                 android:textStyle="bold"
                 android:textSize="21sp"
                 android:gravity="center"
@@ -92,7 +92,7 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:text="Completion date"
-                android:textColor="#687783"
+                android:textColor="@color/ltm_muted"
                 android:textSize="14sp"
                 android:gravity="center"
                 android:paddingBottom="20dp" />
@@ -123,8 +123,8 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:text="Back"
-            android:textColor="#071D35"
-            android:backgroundTint="#EDEAFF"
+            android:textColor="@color/ltm_navy"
+            android:backgroundTint="@color/ltm_blue_light"
             android:layout_marginTop="8dp" />
 
     </LinearLayout>

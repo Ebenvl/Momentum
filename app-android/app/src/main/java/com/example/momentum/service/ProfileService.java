@@ -41,6 +41,16 @@ public class ProfileService {
         api.disableTwoFactor(password, callback);
     }
 
+    // Every day that counted towards their streak, for the Momentum Map.
+    public void getActiveDays(ApiCallback<List<String>> callback) {
+        api.getActiveDays(callback);
+    }
+
+    // {found, total} secret badges.
+    public void getSecrets(ApiCallback<int[]> callback) {
+        api.getSecrets(callback);
+    }
+
     // The badges they've earned, newest first.
     public void getMyBadges(ApiCallback<List<Badge>> callback) {
         api.getMyBadges(callback);

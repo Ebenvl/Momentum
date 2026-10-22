@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Dark mode: the same colour names with darker backgrounds and lighter text.
+     Android uses these instead of values/colors.xml when the app is in dark mode. -->
+<resources>
+    <color name="ltm_navy">#E8EDF5</color>
+    <color name="ltm_text">#E8EDF5</color>
+    <color name="ltm_muted">#A9B6C2</color>
+    <color name="ltm_background">#0F1B2D</color>
+    <color name="ltm_card">#1B2A3F</color>
+    <color name="ltm_border">#2C3E57</color>
+    <color name="ltm_blue_light">#2E2A55</color>
+    <color name="ltm_orange_light">#4A2A1C</color>
+</resources>

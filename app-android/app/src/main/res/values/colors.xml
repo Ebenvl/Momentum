@@ -14,4 +14,10 @@
     <color name="ltm_text">#071D35</color>
     <color name="ltm_muted">#687783</color>
     <color name="ltm_border">#E1E6F0</color>
+
+    <!-- Cards and text boxes, the navy top bar (always navy, even in dark mode),
+         and the light orange behind warnings. -->
+    <color name="ltm_card">#FFFFFF</color>
+    <color name="ltm_bar">#071D35</color>
+    <color name="ltm_orange_light">#FDEBE0</color>
 </resources>

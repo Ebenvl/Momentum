@@ -82,7 +82,9 @@ public class BadgeManagement extends AdminScreen {
 
     // The rule in words, like "Complete 5 courses".
     private String ruleText(Badge badge) {
-        if ("courses_completed".equals(badge.ruleType)) {
+        if (badge.ruleType != null && badge.ruleType.startsWith("secret_")) {
+            return "Secret (easter egg)";
+        } else if ("courses_completed".equals(badge.ruleType)) {
             return "Complete " + badge.ruleValue + (badge.ruleValue == 1 ? " course" : " courses");
         } else if ("streak_days".equals(badge.ruleType)) {
             return badge.ruleValue + "-day streak";
@@ -107,6 +109,14 @@ public class BadgeManagement extends AdminScreen {
             rule.setSelection(Math.max(0, Arrays.asList(RULES).indexOf(existing.ruleType)));
         }
 
+        // A secret badge's rule is built into the app, so only its name, text,
+        // points and on/off can be changed.
+        boolean secret = existing != null && existing.ruleType != null && existing.ruleType.startsWith("secret_");
+        if (secret) {
+            rule.setVisibility(android.view.View.GONE);
+            target.setVisibility(android.view.View.GONE);
+        }
+
         new AlertDialog.Builder(this)
                 .setTitle(existing == null ? "New badge" : "Edit badge")
                 .setView(form(name, description, rule, target, points, active))
@@ -114,8 +124,8 @@ public class BadgeManagement extends AdminScreen {
                     Badge badge = new Badge();
                     badge.name = name.getText().toString().trim();
                     badge.description = description.getText().toString().trim();
-                    badge.ruleType = RULES[rule.getSelectedItemPosition()];
-                    Integer targetValue = numberFrom(target);
+                    badge.ruleType = secret ? existing.ruleType : RULES[rule.getSelectedItemPosition()];
+                    Integer targetValue = secret ? Integer.valueOf(1) : numberFrom(target);
                     Integer pointsValue = numberFrom(points);
                     badge.isActive = active.isChecked();
 
@@ -127,7 +137,7 @@ public class BadgeManagement extends AdminScreen {
                         toast("Enter a number to reach, more than 0");
                         return;
                     }
-                    badge.ruleValue = targetValue;
+                    badge.ruleValue = secret ? existing.ruleValue : targetValue;
                     badge.pointsAwarded = pointsValue != null ? pointsValue : 0;
 
                     adminService.saveBadge(existing != null ? existing.id : null, badge, reloadAfter("Badge saved"));

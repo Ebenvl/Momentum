@@ -1,6 +1,8 @@
 package com.momentum.backend.sync;
 
+import com.momentum.backend.config.AppClock;
 import com.momentum.backend.db.ActivityLogRepository;
+import com.momentum.backend.db.ActivityRepository;
 import com.momentum.backend.db.CourseRepository;
 import com.momentum.backend.db.EnrolmentRepository;
 import com.momentum.backend.db.PointsRepository;
@@ -18,6 +20,7 @@ import com.momentum.backend.model.Course;
 import com.momentum.backend.model.User;
 import com.momentum.backend.rewards.BadgeService;
 import com.momentum.backend.rewards.GoalChecker;
+import com.momentum.backend.rewards.StreakService;
 
 import java.sql.SQLException;
 import java.time.YearMonth;
@@ -41,6 +44,8 @@ public class SyncService {
     private final StreakRepository streakRepository;
     private final GoalChecker goalChecker;
     private final BadgeService badgeService;
+    private final StreakService streakService;
+    private final ActivityRepository activityRepository;
 
     // One background thread for login syncs. Daemon means it doesn't keep
     // the backend running after Ctrl+C.
@@ -54,7 +59,8 @@ public class SyncService {
                        UserRepository userRepository, EnrolmentRepository enrolmentRepository,
                        SnapshotRepository snapshotRepository, PointsRepository pointsRepository,
                        ActivityLogRepository activityLogRepository, StreakRepository streakRepository,
-                       GoalChecker goalChecker, BadgeService badgeService) {
+                       GoalChecker goalChecker, BadgeService badgeService,
+                       StreakService streakService, ActivityRepository activityRepository) {
         this.learnTechClient = learnTechClient;
         this.courseRepository = courseRepository;
         this.userRepository = userRepository;
@@ -65,6 +71,8 @@ public class SyncService {
         this.streakRepository = streakRepository;
         this.goalChecker = goalChecker;
         this.badgeService = badgeService;
+        this.streakService = streakService;
+        this.activityRepository = activityRepository;
     }
 
     // Saves LearnTech's whole course catalogue into the Courses table.
@@ -200,9 +208,24 @@ public class SyncService {
                 scoreMax = enrolment.assessment.scoreMax;
             }
 
+            // Minutes spent in this course since the last sync, for the streak.
+            // Null the first time, because then it's unknown when they were spent.
+            Integer minutesBefore = enrolmentRepository.findTimeSpent(user.userId, course.courseId);
+
             enrolmentRepository.saveEnrolment(user.userId, course.courseId, enrolment.state,
                     enrolment.timeSpentMinutes, assessmentStatus, score, scoreMax,
                     enrolment.firstAccess, enrolment.dateCompleted);
+
+            // Today counts towards the streak once the learner has spent at least 35%
+            // of the course's expected time in it today.
+            if (minutesBefore != null && enrolment.timeSpentMinutes > minutesBefore
+                    && course.expectedMinutes != null && course.expectedMinutes > 0) {
+                int today = activityRepository.addLearningMinutes(user.userId, course.courseId,
+                        AppClock.today(), enrolment.timeSpentMinutes - minutesBefore);
+                if (today >= Math.ceil(LEARNING_SHARE * course.expectedMinutes)) {
+                    streakService.recordActiveDay(user.userId, "learning");
+                }
+            }
 
             // Completed courses earn points. The points table only allows
             // one award per course per learner, so a re-sync never doubles it.
@@ -265,4 +288,8 @@ public class SyncService {
     // The share of a course's expected minutes a learner has to spend in it
     // for a completion to earn points.
     private static final double MIN_TIME_SHARE = 0.7;
+
+    // The share of a course's expected minutes spent in it in one day that
+    // counts that day towards the streak.
+    private static final double LEARNING_SHARE = 0.35;
 }

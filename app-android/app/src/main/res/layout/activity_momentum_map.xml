@@ -2,7 +2,7 @@
 <ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="#F4F6FA"
+    android:background="@color/ltm_background"
     android:fillViewport="true">
 
     <LinearLayout
@@ -17,15 +17,15 @@
             android:layout_height="wrap_content"
             android:text="← Back"
             android:textAllCaps="false"
-            android:backgroundTint="#EDEAFF"
-            android:textColor="#071D35" />
+            android:backgroundTint="@color/ltm_blue_light"
+            android:textColor="@color/ltm_navy" />
 
         <TextView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="16dp"
             android:text="Momentum Map"
-            android:textColor="#071D35"
+            android:textColor="@color/ltm_navy"
             android:textSize="28sp"
             android:textStyle="bold" />
 
@@ -34,7 +34,7 @@
             android:layout_height="wrap_content"
             android:layout_marginTop="6dp"
             android:text="Every study day moves you forward."
-            android:textColor="#687783"
+            android:textColor="@color/ltm_muted"
             android:textSize="15sp" />
 
         <LinearLayout
@@ -58,7 +58,7 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:text="🔥 Study streak"
-                    android:textColor="#687783"
+                    android:textColor="@color/ltm_muted"
                     android:textSize="13sp" />
 
                 <TextView
@@ -67,7 +67,7 @@
                     android:layout_height="wrap_content"
                     android:layout_marginTop="8dp"
                     android:text="0 days"
-                    android:textColor="#071D35"
+                    android:textColor="@color/ltm_navy"
                     android:textSize="24sp"
                     android:textStyle="bold" />
 
@@ -88,7 +88,7 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:text="📅 Study history"
-                    android:textColor="#687783"
+                    android:textColor="@color/ltm_muted"
                     android:textSize="13sp" />
 
                 <TextView
@@ -97,7 +97,7 @@
                     android:layout_height="wrap_content"
                     android:layout_marginTop="8dp"
                     android:text="0 recorded study days"
-                    android:textColor="#071D35"
+                    android:textColor="@color/ltm_navy"
                     android:textSize="18sp"
                     android:textStyle="bold" />
 
@@ -137,7 +137,7 @@
                     android:layout_weight="1"
                     android:gravity="center"
                     android:text="October 2026"
-                    android:textColor="#071D35"
+                    android:textColor="@color/ltm_navy"
                     android:textSize="19sp"
                     android:textStyle="bold" />
 
@@ -178,21 +178,21 @@
                     android:layout_height="wrap_content"
                     android:layout_marginStart="7dp"
                     android:text="Studied"
-                    android:textColor="#687783"
+                    android:textColor="@color/ltm_muted"
                     android:textSize="13sp" />
 
                 <View
                     android:layout_width="14dp"
                     android:layout_height="14dp"
                     android:layout_marginStart="20dp"
-                    android:background="#E1E6F0" />
+                    android:background="@color/ltm_border" />
 
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:layout_marginStart="7dp"
                     android:text="No record"
-                    android:textColor="#687783"
+                    android:textColor="@color/ltm_muted"
                     android:textSize="13sp" />
 
             </LinearLayout>
@@ -204,7 +204,7 @@
             android:layout_height="wrap_content"
             android:layout_marginTop="22dp"
             android:text="Selected day"
-            android:textColor="#071D35"
+            android:textColor="@color/ltm_navy"
             android:textSize="18sp"
             android:textStyle="bold" />
 
@@ -213,10 +213,10 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="8dp"
-            android:background="#EDEAFF"
+            android:background="@color/ltm_blue_light"
             android:padding="16dp"
             android:text="Tap a date to view its study record."
-            android:textColor="#071D35"
+            android:textColor="@color/ltm_navy"
             android:textSize="15sp" />
 
     </LinearLayout>

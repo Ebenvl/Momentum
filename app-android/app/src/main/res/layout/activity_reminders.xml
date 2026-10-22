@@ -2,7 +2,7 @@
 <ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="#F4F6FA"
+    android:background="@color/ltm_background"
     android:fillViewport="true">
 
     <LinearLayout
@@ -16,7 +16,7 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:text="Study Reminders"
-            android:textColor="#071D35"
+            android:textColor="@color/ltm_navy"
             android:textSize="28sp"
             android:textStyle="bold"
             android:gravity="center"
@@ -27,7 +27,7 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:text="Build a learning habit, one day at a time."
-            android:textColor="#687783"
+            android:textColor="@color/ltm_muted"
             android:textSize="16sp"
             android:gravity="center"
             android:layout_marginBottom="28dp" />
@@ -52,7 +52,7 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="Your daily study time"
-                android:textColor="#071D35"
+                android:textColor="@color/ltm_navy"
                 android:textSize="20sp"
                 android:textStyle="bold"
                 android:layout_marginBottom="12dp" />
@@ -73,8 +73,8 @@
                 android:layout_height="wrap_content"
                 android:text="Choose Time"
                 android:textAllCaps="false"
-                android:backgroundTint="#EDEAFF"
-                android:textColor="#071D35"
+                android:backgroundTint="@color/ltm_blue_light"
+                android:textColor="@color/ltm_navy"
                 android:layout_marginBottom="12dp" />
 
             <Button
@@ -93,7 +93,7 @@
                 android:layout_height="wrap_content"
                 android:text="Cancel Reminder"
                 android:textAllCaps="false"
-                android:backgroundTint="#FDEBE0"
+                android:backgroundTint="@color/ltm_orange_light"
                 android:textColor="#E46C28" />
 
             <TextView
@@ -101,7 +101,7 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:text="No reminder scheduled yet."
-                android:textColor="#687783"
+                android:textColor="@color/ltm_muted"
                 android:textSize="14sp"
                 android:gravity="center"
                 android:layout_marginTop="20dp" />

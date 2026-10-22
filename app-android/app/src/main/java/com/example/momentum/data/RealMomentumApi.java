@@ -195,6 +195,7 @@ public class RealMomentumApi implements MomentumApi {
                 badge.description = optString(row, "description");
                 badge.pointsAwarded = row.optInt("pointsAwarded");
                 badge.awardedAt = optString(row, "awardedAt");
+                badge.isHidden = row.optBoolean("isHidden");
                 badges.add(badge);
             }
             return badges;
@@ -308,14 +309,46 @@ public class RealMomentumApi implements MomentumApi {
     }
 
     @Override
-    public void logCheckIn(int goalId, String note, Integer valueLogged, ApiCallback<Void> callback) {
+    public void logCheckIn(int goalId, String note, Integer valueLogged, ApiCallback<List<String>> callback) {
         run(callback, () -> {
             JSONObject body = new JSONObject();
             body.put("note", note != null ? note : JSONObject.NULL);
             body.put("valueLogged", valueLogged != null ? valueLogged : JSONObject.NULL);
-            send("POST", "/goals/" + goalId + "/checkins", body);
-            return null;
+            return names(new JSONObject(send("POST", "/goals/" + goalId + "/checkins", body)).optJSONArray("unlocked"));
         });
+    }
+
+    @Override
+    public void reportEvent(String event, ApiCallback<List<String>> callback) {
+        run(callback, () -> {
+            JSONObject body = new JSONObject();
+            body.put("event", event);
+            return names(new JSONObject(send("POST", "/me/events", body)).optJSONArray("unlocked"));
+        });
+    }
+
+    @Override
+    public void getActiveDays(ApiCallback<List<String>> callback) {
+        run(callback, () -> names(new JSONArray(send("GET", "/me/active-days", null))));
+    }
+
+    @Override
+    public void getSecrets(ApiCallback<int[]> callback) {
+        run(callback, () -> {
+            JSONObject row = new JSONObject(send("GET", "/me/secrets", null));
+            return new int[]{row.optInt("found"), row.optInt("total")};
+        });
+    }
+
+    // A JSON list of text, like ["Curious Mind"], as a Java list. Empty if there is none.
+    private List<String> names(JSONArray array) throws Exception {
+        List<String> names = new ArrayList<>();
+        if (array != null) {
+            for (int i = 0; i < array.length(); i++) {
+                names.add(array.getString(i));
+            }
+        }
+        return names;
     }
 
     @Override

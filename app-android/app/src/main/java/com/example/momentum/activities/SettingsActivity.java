@@ -17,6 +17,8 @@ import android.widget.ScrollView;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import androidx.core.content.ContextCompat;
+
 import com.example.momentum.R;
 import com.example.momentum.data.ApiCallback;
 import com.example.momentum.data.AppSettings;
@@ -29,8 +31,7 @@ import com.example.momentum.service.ProfileService;
 // looks (dark mode and text size).
 public class SettingsActivity extends BaseActivity {
 
-    private static final int NAVY = Color.rgb(7, 29, 53);
-    private static final int MUTED = Color.rgb(104, 119, 131);
+    // Text colours come from colors.xml, so they switch in dark mode
     private static final int GOLD = Color.rgb(244, 185, 66);
 
     private final ProfileService profileService = new ProfileService();
@@ -326,7 +327,7 @@ public class SettingsActivity extends BaseActivity {
             option.setOnClickListener(v -> AppSettings.setTheme(this, chosen));
         }
         card.addView(theme);
-        card.addView(label("Dark mode changes the main screens. The extra screens stay light for now."));
+        card.addView(label("Dark mode covers the whole app, apart from the admin screens."));
 
         card.addView(label("Text size"));
         RadioGroup size = new RadioGroup(this);
@@ -372,7 +373,7 @@ public class SettingsActivity extends BaseActivity {
         TextView view = new TextView(this);
         view.setText(value);
         view.setTextSize(13);
-        view.setTextColor(MUTED);
+        view.setTextColor(ContextCompat.getColor(this, R.color.ltm_muted));
         view.setPadding(0, dp(6), 0, dp(4));
         return view;
     }
@@ -381,7 +382,7 @@ public class SettingsActivity extends BaseActivity {
         EditText input = new EditText(this);
         input.setHint(hint);
         input.setSingleLine(true);
-        input.setTextColor(NAVY);
+        input.setTextColor(ContextCompat.getColor(this, R.color.ltm_navy));
         if (password) {
             input.setInputType(InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_VARIATION_PASSWORD);
         }
@@ -391,7 +392,7 @@ public class SettingsActivity extends BaseActivity {
     private RadioButton radio(String label) {
         RadioButton option = new RadioButton(this);
         option.setText(label);
-        option.setTextColor(NAVY);
+        option.setTextColor(ContextCompat.getColor(this, R.color.ltm_navy));
         return option;
     }
 

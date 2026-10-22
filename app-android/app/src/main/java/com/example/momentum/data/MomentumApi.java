@@ -49,6 +49,15 @@ public interface MomentumApi {
     // Changes the user's own password. The current one has to be right.
     void changePassword(String currentPassword, String newPassword, ApiCallback<Void> callback);
 
+    // Something done in the app, for the easter eggs. Gives back any secret badges it unlocked.
+    void reportEvent(String event, ApiCallback<List<String>> callback);
+
+    // Every day that counted towards the streak, like "2026-10-22".
+    void getActiveDays(ApiCallback<List<String>> callback);
+
+    // How many secret badges the learner has found, and how many there are: {found, total}.
+    void getSecrets(ApiCallback<int[]> callback);
+
     // The badges the learner has earned, newest first.
     void getMyBadges(ApiCallback<List<Badge>> callback);
 
@@ -67,7 +76,8 @@ public interface MomentumApi {
     void saveGoal(Integer goalId, String title, String goalType, Integer targetValue,
                   Integer targetCourseId, String targetDate, ApiCallback<Void> callback);
 
-    void logCheckIn(int goalId, String note, Integer valueLogged, ApiCallback<Void> callback);
+    // Gives back the names of any secret badges (easter eggs) the check-in unlocked.
+    void logCheckIn(int goalId, String note, Integer valueLogged, ApiCallback<List<String>> callback);
 
     void getCheckIns(int goalId, ApiCallback<List<CheckIn>> callback);
 

@@ -12,6 +12,9 @@ USE momentum;
 
 -- Drop in reverse order of dependency, children before parents,
 -- otherwise the foreign keys block the drop.
+DROP TABLE IF EXISTS UserEvents;
+DROP TABLE IF EXISTS LearningMinutes;
+DROP TABLE IF EXISTS ActiveDays;
 DROP TABLE IF EXISTS EmailCodes;
 DROP TABLE IF EXISTS StudySessions;
 DROP TABLE IF EXISTS PlatformConfig;
@@ -180,6 +183,7 @@ CREATE TABLE Badges (
     rule_value           INT           NOT NULL DEFAULT 0,
     points_awarded       INT           NOT NULL DEFAULT 0,
     is_active            BOOLEAN       NOT NULL DEFAULT TRUE,
+    is_hidden            BOOLEAN       NOT NULL DEFAULT FALSE,   -- secret badge (easter egg), shown once earned
     created_at           DATETIME      NOT NULL DEFAULT CURRENT_TIMESTAMP,
     PRIMARY KEY (badge_id)
 ) ENGINE=InnoDB;
@@ -313,4 +317,48 @@ CREATE TABLE EmailCodes (
     PRIMARY KEY (code_id),
     KEY idx_codes_user (user_id, purpose),
     CONSTRAINT fk_codes_user FOREIGN KEY (user_id) REFERENCES Users(user_id) ON DELETE CASCADE
+) ENGINE=InnoDB;
+
+-- ------------------------------------------------------------
+-- ActiveDays
+-- The days that counted towards a learner's streak, and why: a
+-- check-in, or learning time (at least 35% of a course's expected
+-- time spent in it that day, seen by the sync).
+-- ------------------------------------------------------------
+CREATE TABLE ActiveDays (
+    user_id              INT           NOT NULL,
+    active_on            DATE          NOT NULL,
+    source               ENUM('checkin', 'learning') NOT NULL,
+    PRIMARY KEY (user_id, active_on, source),
+    CONSTRAINT fk_activedays_user FOREIGN KEY (user_id) REFERENCES Users(user_id) ON DELETE CASCADE
+) ENGINE=InnoDB;
+
+-- ------------------------------------------------------------
+-- LearningMinutes
+-- Minutes spent in each course on each day, added up by the sync
+-- from the change in LearnTech's time spent since the last sync.
+-- ------------------------------------------------------------
+CREATE TABLE LearningMinutes (
+    user_id              INT           NOT NULL,
+    course_id            INT           NOT NULL,
+    learned_on           DATE          NOT NULL,
+    minutes              INT           NOT NULL DEFAULT 0,
+    PRIMARY KEY (user_id, course_id, learned_on),
+    CONSTRAINT fk_learning_user   FOREIGN KEY (user_id)   REFERENCES Users(user_id)     ON DELETE CASCADE,
+    CONSTRAINT fk_learning_course FOREIGN KEY (course_id) REFERENCES Courses(course_id) ON DELETE CASCADE
+) ENGINE=InnoDB;
+
+-- ------------------------------------------------------------
+-- UserEvents
+-- Things a learner did in the app, like opening the timetable,
+-- for the easter eggs.
+-- ------------------------------------------------------------
+CREATE TABLE UserEvents (
+    event_id             INT           NOT NULL AUTO_INCREMENT,
+    user_id              INT           NOT NULL,
+    event                VARCHAR(50)   NOT NULL,
+    happened_on          DATE          NOT NULL,
+    PRIMARY KEY (event_id),
+    KEY idx_events_user (user_id, event, happened_on),
+    CONSTRAINT fk_events_user FOREIGN KEY (user_id) REFERENCES Users(user_id) ON DELETE CASCADE
 ) ENGINE=InnoDB;

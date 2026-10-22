@@ -29,7 +29,9 @@ Android app (Java)  -->  Momentum backend (Java, Javalin)  -->  MySQL
 - Open a course on LearnTech inside the app
 - Set goals of different types, edit them, and log check-ins on them
 - Goals that the app can check, like finishing a course or keeping a streak, **complete themselves** from the learner's data
-- Earn points for completed courses, badges and goals, keep a daily streak through check-ins, and earn badges
+- Earn points for completed courses, badges and goals, and earn badges
+- Keep a daily streak: a day counts when they spend at least 35% of a course's expected time learning in it on LearnTech, or log a check-in on a goal
+- Find secret achievements (easter eggs) by exploring the app, each with its own XP
 - A monthly and an all-time leaderboard
 - A profile with all-time points, this month's points and the streak
 - Settings: change name and password, two-step login, fingerprint login, dark mode, and text size
@@ -116,6 +118,8 @@ In MySQL Workbench, logged in as root:
 1. Open `backend/database/01_setup.sql`, change `CHANGE_ME` to a password for the app's database user, and run it. Don't save the file with the real password in it.
 2. Run `backend/database/02_schema.sql`. It creates every table.
 
+3. Run `backend/database/05_extras.sql`. It adds the secret achievements and Bartholomew Crownelius the Third, and on an older database also the tables for the streak and the easter eggs.
+
 `03_study_sessions.sql` and `04_two_factor.sql` are only for a database set up before those features existed. Each adds what's missing without deleting anything. A database made with the current `02_schema.sql` already has both.
 
 ### 2. Backend
@@ -158,6 +162,7 @@ All routes except register, login, the password reset and `/health` need the log
 | `/me/two-factor/start`, `/confirm`, `/disable` | Turn two-step login on (with an emailed code) or off (with the password) |
 | `GET /me/courses`, `GET /courses` | Your courses, the whole catalogue |
 | `GET /me/badges`, `GET /me/progress` | Your badges, your progress over time |
+| `GET /me/active-days`, `GET /me/secrets`, `POST /me/events` | Days that counted towards the streak, secret achievements found, easter egg events |
 | `/goals`, `/goals/{id}`, `/goals/{id}/checkins` | Goals and check-ins |
 | `GET /leaderboard`, `GET /leaderboard?period=all` | This month's rankings, all-time rankings |
 | `/study-sessions` | The study timetable |

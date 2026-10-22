@@ -1,5 +1,6 @@
 package com.momentum.backend.rewards;
 
+import com.momentum.backend.config.AppClock;
 import com.momentum.backend.db.ActivityLogRepository;
 import com.momentum.backend.db.EnrolmentRepository;
 import com.momentum.backend.db.GoalRepository;
@@ -9,7 +10,6 @@ import com.momentum.backend.model.Goal;
 
 import java.sql.SQLException;
 import java.time.LocalDate;
-import java.time.YearMonth;
 
 // Completes a learner's goals by itself when their data shows the goal is met,
 // and marks goals failed when the target date passes first.
@@ -62,11 +62,11 @@ public class GoalChecker {
                 goalRepository.updateGoalStatus(goal.goalId, userId, "completed");
                 if (goal.pointsEligible) {
                     pointsRepository.awardPoints(userId, GOAL_POINTS, "goal_completed",
-                            goal.goalId, YearMonth.now().toString());
+                            goal.goalId, AppClock.today().toString().substring(0, 7));
                 }
                 activityLogRepository.log(userId, "goal completed: " + goal.title, "info");
             } else if (goal.targetDate != null
-                    && LocalDate.parse(goal.targetDate).isBefore(LocalDate.now())) {
+                    && LocalDate.parse(goal.targetDate).isBefore(AppClock.today())) {
                 goalRepository.updateGoalStatus(goal.goalId, userId, "failed");
                 activityLogRepository.log(userId, "goal failed: " + goal.title, "info");
             }
