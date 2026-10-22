@@ -1,11 +1,14 @@
 package com.momentum.backend.profile;
 
+import com.momentum.backend.auth.CodeService;
 import com.momentum.backend.auth.CurrentUser;
+import com.momentum.backend.db.ActivityLogRepository;
 import com.momentum.backend.db.BadgeRepository;
 import com.momentum.backend.db.PointsRepository;
 import com.momentum.backend.db.SnapshotRepository;
 import com.momentum.backend.db.StreakRepository;
 import com.momentum.backend.db.UserRepository;
+import com.momentum.backend.model.CodeRequest;
 import com.momentum.backend.model.PasswordRequest;
 import com.momentum.backend.model.ProfileRequest;
 import com.momentum.backend.model.Streak;
@@ -24,15 +27,20 @@ public class ProfileController {
     private final PointsRepository pointsRepository;
     private final StreakRepository streakRepository;
     private final BadgeRepository badgeRepository;
+    private final CodeService codeService;
+    private final ActivityLogRepository activityLogRepository;
 
     public ProfileController(UserRepository userRepository, SnapshotRepository snapshotRepository,
                              PointsRepository pointsRepository, StreakRepository streakRepository,
-                             BadgeRepository badgeRepository) {
+                             BadgeRepository badgeRepository, CodeService codeService,
+                             ActivityLogRepository activityLogRepository) {
         this.userRepository = userRepository;
         this.snapshotRepository = snapshotRepository;
         this.pointsRepository = pointsRepository;
         this.streakRepository = streakRepository;
         this.badgeRepository = badgeRepository;
+        this.codeService = codeService;
+        this.activityLogRepository = activityLogRepository;
     }
 
     // -----------------------------------------------------
@@ -188,6 +196,94 @@ public class ProfileController {
 
             userRepository.updatePassword(userId, BCrypt.hashpw(request.newPassword, BCrypt.gensalt()));
             ctx.json(Map.of("message", "password changed"));
+        } catch (SQLException e) {
+            ctx.status(500).json(Map.of("error", "something went wrong, try again"));
+        }
+    }
+
+    // -----------------------------------------------------
+    // POST /me/two-factor/start   emails a code to prove the email is theirs
+    // POST /me/two-factor/confirm turns two-step login on with that code
+    // POST /me/two-factor/disable turns it off, with their password
+    // -----------------------------------------------------
+    public void startTwoFactor(Context ctx) {
+
+        Integer userId = CurrentUser.id(ctx);
+        if (userId == null) {
+            ctx.status(401).json(Map.of("error", "please log in"));
+            return;
+        }
+
+        try {
+            User user = userRepository.findUserById(userId);
+            CodeService.SendResult sent = codeService.sendCode(user, "enable");
+            switch (sent) {
+                case SENT -> ctx.json(Map.of("message", "code sent to " + user.email));
+                case TOO_SOON -> ctx.status(429).json(Map.of("error", "a code was just sent, wait a minute"));
+                case EMAIL_NOT_SET_UP -> ctx.status(503).json(Map.of("error", "email isn't set up on the server"));
+                default -> ctx.status(503).json(Map.of("error", "couldn't send the email, try again later"));
+            }
+        } catch (SQLException e) {
+            ctx.status(500).json(Map.of("error", "something went wrong, try again"));
+        }
+    }
+
+    public void confirmTwoFactor(Context ctx) {
+
+        Integer userId = CurrentUser.id(ctx);
+        if (userId == null) {
+            ctx.status(401).json(Map.of("error", "please log in"));
+            return;
+        }
+
+        CodeRequest request;
+        try {
+            request = ctx.bodyAsClass(CodeRequest.class);
+        } catch (Exception e) {
+            ctx.status(400).json(Map.of("error", "invalid request"));
+            return;
+        }
+
+        try {
+            User user = userRepository.findUserById(userId);
+            if (!codeService.checkCode(user, "enable", request.code)) {
+                ctx.status(400).json(Map.of("error", "that code is wrong or has run out"));
+                return;
+            }
+            userRepository.setTwoFactor(userId, true);
+            activityLogRepository.log(userId, "two-step login turned on", "info");
+            ctx.json(Map.of("message", "two-step login is on"));
+        } catch (SQLException e) {
+            ctx.status(500).json(Map.of("error", "something went wrong, try again"));
+        }
+    }
+
+    public void disableTwoFactor(Context ctx) {
+
+        Integer userId = CurrentUser.id(ctx);
+        if (userId == null) {
+            ctx.status(401).json(Map.of("error", "please log in"));
+            return;
+        }
+
+        CodeRequest request;
+        try {
+            request = ctx.bodyAsClass(CodeRequest.class);
+        } catch (Exception e) {
+            ctx.status(400).json(Map.of("error", "invalid request"));
+            return;
+        }
+
+        try {
+            // The password has to be right, so a phone left logged in can't turn it off
+            User user = userRepository.findUserById(userId);
+            if (request.password == null || !BCrypt.checkpw(request.password, user.passwordHash)) {
+                ctx.status(400).json(Map.of("error", "your password is wrong"));
+                return;
+            }
+            userRepository.setTwoFactor(userId, false);
+            activityLogRepository.log(userId, "two-step login turned off", "warning");
+            ctx.json(Map.of("message", "two-step login is off"));
         } catch (SQLException e) {
             ctx.status(500).json(Map.of("error", "something went wrong, try again"));
         }

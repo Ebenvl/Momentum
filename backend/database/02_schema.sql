@@ -12,6 +12,7 @@ USE momentum;
 
 -- Drop in reverse order of dependency, children before parents,
 -- otherwise the foreign keys block the drop.
+DROP TABLE IF EXISTS EmailCodes;
 DROP TABLE IF EXISTS StudySessions;
 DROP TABLE IF EXISTS PlatformConfig;
 DROP TABLE IF EXISTS ActivityLogs;
@@ -48,6 +49,7 @@ CREATE TABLE Users (
     created_at           DATETIME      NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at           DATETIME      NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     last_login_at        DATETIME      NULL,
+    two_factor_enabled   BOOLEAN       NOT NULL DEFAULT FALSE,   -- emailed code needed after the password
     PRIMARY KEY (user_id),
     UNIQUE KEY uq_users_email (email),   -- also serves as the login lookup index
     UNIQUE KEY uq_users_idst  (idst)     -- one app account per platform learner
@@ -290,4 +292,25 @@ CREATE TABLE StudySessions (
     PRIMARY KEY (session_id),
     KEY idx_sessions_user (user_id),
     CONSTRAINT fk_sessions_user FOREIGN KEY (user_id) REFERENCES Users(user_id) ON DELETE CASCADE
+) ENGINE=InnoDB;
+
+-- ------------------------------------------------------------
+-- EmailCodes
+-- 6-digit codes sent by email, for two-step login, turning two-step
+-- login on, and resetting a password. Only a hash of the code is
+-- stored, like a password. Each code lasts 10 minutes, works once,
+-- and stops working after 5 wrong tries.
+-- ------------------------------------------------------------
+CREATE TABLE EmailCodes (
+    code_id              INT           NOT NULL AUTO_INCREMENT,
+    user_id              INT           NOT NULL,
+    purpose              ENUM('login', 'reset', 'enable') NOT NULL,
+    code_hash            CHAR(64)      NOT NULL,
+    created_at           DATETIME      NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    expires_at           DATETIME      NOT NULL,
+    attempts             INT           NOT NULL DEFAULT 0,
+    used                 BOOLEAN       NOT NULL DEFAULT FALSE,
+    PRIMARY KEY (code_id),
+    KEY idx_codes_user (user_id, purpose),
+    CONSTRAINT fk_codes_user FOREIGN KEY (user_id) REFERENCES Users(user_id) ON DELETE CASCADE
 ) ENGINE=InnoDB;

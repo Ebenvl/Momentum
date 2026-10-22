@@ -113,10 +113,8 @@ public class MainActivity extends BaseActivity {
     private final ArrayList<Course> courses = new ArrayList<>();
     private final ArrayList<Goal> goals = new ArrayList<>();
     private final ArrayList<LeaderEntry> leaderboard = new ArrayList<>();
-    private int nextGoalId = 1;
     private String userName = "";
     private int userXp = 0;
-    private int monthlyGoal = 0;
     private int streakDays = 0;
 
     // Backend connection
@@ -605,12 +603,17 @@ public class MainActivity extends BaseActivity {
         LinearLayout progressCard = card(p);
         progressCard.setOrientation(LinearLayout.HORIZONTAL);
         progressCard.setGravity(Gravity.CENTER_VERTICAL);
-        float progress = monthlyGoal > 0 ? Math.min(1f, completedCourses / (float) monthlyGoal) : 0f;
+
+
+
+        // Overall progress: courses completed out of courses enrolled. The only
+        // percentage LearnTech can give, since single courses have no progress.
+        float progress = courses.isEmpty() ? 0f : completedCourses / (float) courses.size();
         progressCard.addView(new RingView(this, progress), new LinearLayout.LayoutParams(dp(80), dp(80)));
-        String progressMsg = monthlyGoal > 0
-                ? "You have completed " + completedCourses + " of your monthly goal of "
-                + monthlyGoal + (monthlyGoal == 1 ? " course." : " courses.")
-                : "Your monthly goal progress will appear here once you set a goal.";
+        String progressMsg = courses.isEmpty()
+                ? "Your progress shows here once your LearnTech courses come through."
+                : completedCourses + " of " + courses.size() + " courses complete, "
+                + Math.round(progress * 100) + "%.";
         LinearLayout.LayoutParams msgLp = new LinearLayout.LayoutParams(0, -2, 1f);
         msgLp.leftMargin = dp(16);
         progressCard.addView(text(progressMsg, MUTED, 14, false), msgLp);
@@ -630,7 +633,8 @@ public class MainActivity extends BaseActivity {
             bannerLp.bottomMargin = dp(14);
             cont.addView(banner, bannerLp);
             addText(cont, current.title.toUpperCase(Locale.getDefault()), PURPLE, 12, true);
-            addText(cont, "Instructor: " + current.instructor, MUTED, 13, false);
+            addText(cont, "In progress" + (current.expectedMinutes != null
+                    ? "  •  " + current.expectedMinutes + " min course" : ""), MUTED, 13, false);
             cont.setOnClickListener(v -> showCourseDetails(current));
         }
 

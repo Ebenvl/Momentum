@@ -13,6 +13,7 @@ public class User {
     public Integer totalPoints;   // only in the learner's own profile (/me)
     public Integer currentStreak; // only in the learner's own profile (/me)
     public Integer longestStreak; // only in the learner's own profile (/me)
+    public boolean twoFactorEnabled; // only in the learner's own profile (/me)
 
     public User(int id, Integer idst, String email, String fullName, String role, String status) {
         this.id = id;

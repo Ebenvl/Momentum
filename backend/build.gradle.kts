@@ -43,6 +43,9 @@ dependencies {
     // Creates and checks JWT login tokens, so the app can prove who is
     // logged in without sending the password with every request.
     implementation("com.auth0:java-jwt:4.5.2")
+
+    // Sends emails: two-step login codes and password reset codes.
+    implementation("org.eclipse.angus:angus-mail:2.0.3")
 }
 
 application {

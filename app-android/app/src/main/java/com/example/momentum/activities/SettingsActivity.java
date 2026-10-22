@@ -1,5 +1,6 @@
 package com.example.momentum.activities;
 
+import android.app.AlertDialog;
 import android.graphics.Color;
 import android.graphics.Typeface;
 import android.os.Bundle;
@@ -18,6 +19,7 @@ import android.widget.Toast;
 import com.example.momentum.R;
 import com.example.momentum.data.ApiCallback;
 import com.example.momentum.data.AppSettings;
+import com.example.momentum.data.BiometricLogin;
 import com.example.momentum.data.Session;
 import com.example.momentum.model.User;
 import com.example.momentum.service.ProfileService;
@@ -90,6 +92,8 @@ public class SettingsActivity extends BaseActivity {
 
         addAccountSection();
         addPasswordSection();
+        addTwoStepSection();
+        addFingerprintSection();
         addAppearanceSection();
     }
 
@@ -163,6 +167,132 @@ public class SettingsActivity extends BaseActivity {
                     toast(error);
                 }
             });
+        }));
+    }
+
+    // -----------------------------------------------------
+    // Two-step login: after the password, a code emailed to them
+    // -----------------------------------------------------
+    private void addTwoStepSection() {
+        LinearLayout card = section("Two-step login");
+        TextView status = label("Checking...");
+        card.addView(status);
+
+        profileService.getMe(new ApiCallback<User>() {
+            @Override
+            public void onSuccess(User me) {
+                boolean on = me.twoFactorEnabled;
+                status.setText(on
+                        ? "On. After your password, you'll also need a code we email to " + me.email + "."
+                        : "Off. Turn it on to also need a code from your email when you log in, "
+                        + "so your password alone isn't enough.");
+                if (on) {
+                    card.addView(button("Turn off", () -> turnOffTwoStep()));
+                } else {
+                    card.addView(button("Turn on", () -> turnOnTwoStep()));
+                }
+            }
+
+            @Override
+            public void onError(String error) {
+                status.setText(error);
+            }
+        });
+    }
+
+    // Emails a code to check the address is really theirs, then turns it on with it.
+    private void turnOnTwoStep() {
+        profileService.startTwoFactor(new ApiCallback<Void>() {
+            @Override
+            public void onSuccess(Void result) {
+                EditText code = input("6-digit code", false);
+                code.setInputType(InputType.TYPE_CLASS_NUMBER);
+                new AlertDialog.Builder(SettingsActivity.this)
+                        .setTitle("Check your email")
+                        .setMessage("We sent a code to " + Session.getUser().email + ". Enter it to turn on two-step login.")
+                        .setView(dialogForm(code))
+                        .setPositiveButton("Turn on", (d, w) -> profileService.confirmTwoFactor(
+                                code.getText().toString().trim(), refreshAfter("Two-step login is on")))
+                        .setNegativeButton("Cancel", null)
+                        .show();
+            }
+
+            @Override
+            public void onError(String error) {
+                toast(error);
+            }
+        });
+    }
+
+    // Turning it off needs the password, so a phone left logged in can't do it.
+    private void turnOffTwoStep() {
+        EditText password = input("Your password", true);
+        new AlertDialog.Builder(this)
+                .setTitle("Turn off two-step login?")
+                .setView(dialogForm(password))
+                .setPositiveButton("Turn off", (d, w) -> profileService.disableTwoFactor(
+                        password.getText().toString(), refreshAfter("Two-step login is off")))
+                .setNegativeButton("Cancel", null)
+                .show();
+    }
+
+    // Shows a message and redraws the screen when a change worked.
+    private ApiCallback<Void> refreshAfter(String message) {
+        return new ApiCallback<Void>() {
+            @Override
+            public void onSuccess(Void result) {
+                toast(message);
+                recreate();
+            }
+
+            @Override
+            public void onError(String error) {
+                toast(error);
+            }
+        };
+    }
+
+    // A dialog's fields with some space around them.
+    private LinearLayout dialogForm(EditText field) {
+        LinearLayout form = new LinearLayout(this);
+        form.setOrientation(LinearLayout.VERTICAL);
+        form.setPadding(dp(24), 0, dp(24), 0);
+        form.addView(field);
+        return form;
+    }
+
+    // -----------------------------------------------------
+    // Fingerprint login: turn it on or off for this phone
+    // -----------------------------------------------------
+    private void addFingerprintSection() {
+        if (!BiometricLogin.isAvailable(this)) {
+            return;   // this phone has no fingerprint or face sensor set up
+        }
+        LinearLayout card = section("Fingerprint login");
+        boolean on = BiometricLogin.isEnabled(this)
+                && Session.getUser().email.equalsIgnoreCase(BiometricLogin.savedEmail(this));
+        card.addView(label(on ? "On. You can log in with your fingerprint on this phone."
+                : "Off. Turn it on to log in with one touch instead of your password."));
+
+        card.addView(button(on ? "Turn off" : "Turn on", () -> {
+            if (on) {
+                BiometricLogin.disable(this);
+                toast("Fingerprint login is off");
+                recreate();
+            } else {
+                BiometricLogin.enable(this, new BiometricLogin.Result() {
+                    @Override
+                    public void onSuccess() {
+                        toast("Fingerprint login is on");
+                        recreate();
+                    }
+
+                    @Override
+                    public void onFailure(String message) {
+                        toast(message);
+                    }
+                });
+            }
         }));
     }
 

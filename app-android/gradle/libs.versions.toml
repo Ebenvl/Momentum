@@ -6,6 +6,7 @@ espressoCore = "3.7.0"
 appcompat = "1.7.1"
 material = "1.13.0"
 activity = "1.13.0"
+biometric = "1.1.0"
 constraintlayout = "2.2.1"
 
 [libraries]
@@ -15,6 +16,7 @@ espresso-core = { group = "androidx.test.espresso", name = "espresso-core", vers
 appcompat = { group = "androidx.appcompat", name = "appcompat", version.ref = "appcompat" }
 material = { group = "com.google.android.material", name = "material", version.ref = "material" }
 activity = { group = "androidx.activity", name = "activity", version.ref = "activity" }
+biometric = { group = "androidx.biometric", name = "biometric", version.ref = "biometric" }
 constraintlayout = { group = "androidx.constraintlayout", name = "constraintlayout", version.ref = "constraintlayout" }
 
 [plugins]

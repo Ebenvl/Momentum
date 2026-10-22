@@ -53,7 +53,7 @@ public class UserRepository {
     // Finds a user by email. Gives back null if nobody has that email.
     public User findUserByEmail(String email) throws SQLException {
 
-        String sql = "SELECT user_id, idst, email, password_hash, full_name, role, status FROM Users WHERE email = ?";
+        String sql = "SELECT user_id, idst, email, password_hash, full_name, role, status, two_factor_enabled FROM Users WHERE email = ?";
 
         try (Connection connection = database.getConnection();
              PreparedStatement statement = connection.prepareStatement(sql)) {
@@ -73,6 +73,7 @@ public class UserRepository {
                 user.fullName = results.getString("full_name");
                 user.role = results.getString("role");
                 user.status = results.getString("status");
+                user.twoFactorEnabled = results.getBoolean("two_factor_enabled");
                 return user;
 
             }
@@ -83,7 +84,7 @@ public class UserRepository {
     // Finds a user by id. Gives back null if there is no such user.
     public User findUserById(int userId) throws SQLException {
 
-        String sql = "SELECT user_id, idst, email, password_hash, full_name, role, status FROM Users WHERE user_id = ?";
+        String sql = "SELECT user_id, idst, email, password_hash, full_name, role, status, two_factor_enabled FROM Users WHERE user_id = ?";
 
         try (Connection connection = database.getConnection();
              PreparedStatement statement = connection.prepareStatement(sql)) {
@@ -103,6 +104,7 @@ public class UserRepository {
                 user.fullName = results.getString("full_name");
                 user.role = results.getString("role");
                 user.status = results.getString("status");
+                user.twoFactorEnabled = results.getBoolean("two_factor_enabled");
                 return user;
             }
         }
@@ -189,6 +191,20 @@ public class UserRepository {
              PreparedStatement statement = connection.prepareStatement(sql)) {
 
             statement.setString(1, fullName);
+            statement.setInt(2, userId);
+            return statement.executeUpdate() == 1;
+        }
+    }
+
+    // Turns two-step login on or off for this user.
+    public boolean setTwoFactor(int userId, boolean enabled) throws SQLException {
+
+        String sql = "UPDATE Users SET two_factor_enabled = ? WHERE user_id = ?";
+
+        try (Connection connection = database.getConnection();
+             PreparedStatement statement = connection.prepareStatement(sql)) {
+
+            statement.setBoolean(1, enabled);
             statement.setInt(2, userId);
             return statement.executeUpdate() == 1;
         }

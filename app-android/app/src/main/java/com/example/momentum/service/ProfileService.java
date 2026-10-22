@@ -27,6 +27,20 @@ public class ProfileService {
         api.changePassword(currentPassword, newPassword, callback);
     }
 
+    // Two-step login: emails a code to check the email is theirs, then turns it on.
+    public void startTwoFactor(ApiCallback<Void> callback) {
+        api.startTwoFactor(callback);
+    }
+
+    public void confirmTwoFactor(String code, ApiCallback<Void> callback) {
+        api.confirmTwoFactor(code, callback);
+    }
+
+    // Turning it off needs their password.
+    public void disableTwoFactor(String password, ApiCallback<Void> callback) {
+        api.disableTwoFactor(password, callback);
+    }
+
     // The badges they've earned, newest first.
     public void getMyBadges(ApiCallback<List<Badge>> callback) {
         api.getMyBadges(callback);

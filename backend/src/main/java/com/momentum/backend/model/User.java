@@ -11,6 +11,7 @@ public class User {
     public String role;
     public String status;
     public String lastLoginAt;   // null if they never logged in
+    public boolean twoFactorEnabled;  // an emailed code is needed after the password
     public Integer courseCount;  // only filled in for the admin's user list
     public Integer totalPoints;  // only filled in for the learner's own profile
     public Integer currentStreak;  // only filled in for the learner's own profile

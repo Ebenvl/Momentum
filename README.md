@@ -1,91 +1,174 @@
 # LearnTech Momentum
 
-Mobile application for ITMDA3-34, Group 6.
+A mobile companion app for learners on LearnTech's learning platform. Learners see the courses they are enrolled on, set personal goals, check in on them, and earn points, badges and streaks. A monthly leaderboard adds some friendly competition. Administrators manage accounts, courses, badges and the platform connection, and can see who is engaged and who is falling behind.
 
-It is a goal tracking app for a client who supplies learning management systems. Learners see the courses they are enrolled in, set their own goals, log progress, and earn points, badges and streaks. There is a monthly leaderboard. The admin side lets the client manage accounts, set up badges and points, and see who is engaged and who is falling behind.
+Built for ITMDA3-34 (Mobile Application and Web Services) by Group 6 at Eduvos: Eben van Wyk van Loggerenberg, Ropafadzo Pakachena, Neo Mokoena and Oratile Mooketsi.
 
-Built as a native Android app in Java, with a Java backend and a MySQL database. The app reads course data from the client's platform through a read only API. All data we use is test data that we create ourselves.
+All data in the system is synthetic test data from LearnTech's sandbox. No real learner or company data is used.
 
-## What is in this repository
+## How it fits together
+
+```
+Android app (Java)  -->  Momentum backend (Java, Javalin)  -->  MySQL
+                                     |
+                                     +-->  LearnTech API (read only)
+```
+
+- The **Android app** only ever talks to our backend. It never holds the LearnTech API key and never touches the database directly.
+- The **backend** owns everything we add on top of LearnTech: accounts, goals, check-ins, points, badges, streaks and logs, in our own MySQL database.
+- The **LearnTech API** is read only. The backend syncs courses and learner progress from it, at startup, every 30 minutes, and for a learner when they log in. Nothing is ever written back to LearnTech.
+
+## Features
+
+### Learners
+
+- Register and log in, or log in with a **fingerprint or face** once it's turned on
+- Optional **two-step login**: after the password, a code emailed to them
+- **Forgot password**: a code emailed to them lets them choose a new password
+- See their enrolled courses with their state (not started, in progress, completed) and the points each one earned, plus the rest of the course catalogue
+- Open a course on LearnTech inside the app
+- Set goals of different types, edit them, and log check-ins on them
+- Goals that the app can check, like finishing a course or keeping a streak, **complete themselves** from the learner's data
+- Earn points for completed courses, badges and goals, keep a daily streak through check-ins, and earn badges
+- A monthly and an all-time leaderboard
+- A profile with all-time points, this month's points and the streak
+- Settings: change name and password, two-step login, fingerprint login, dark mode, and text size
+- Achievements, a certificate for completed courses, a study timetable, reminders, a momentum map and study coaches
+
+### Administrators
+
+Everything a learner can do, plus:
+
+- A dashboard with live numbers and recent activity
+- User management: create, edit, suspend, reactivate, delete, and link an account to a LearnTech learner
+- Course management: override the points a course is worth, and set an expected duration where LearnTech has none
+- Badge management: create badges with a rule (courses completed, streak days or total points) and the points they give
+- The LearnTech connection: change the platform address and API key, and test the connection. The key is stored encrypted on the server and only ever shown masked
+- Export any table as a CSV file
+- Engagement analytics and the system activity log
+
+## How points work
+
+A completed course is worth its expected minutes in points, so a 60-minute course is worth twice a 30-minute one. It only counts if the learner spent at least 70% of the expected time in it, so rushed completions earn nothing. Time spent is only a check, never the score. An administrator can override the points of any course.
+
+Fast Course (LearnTech course 58) is the demo course. It only takes about 10 seconds, and the API reports time in whole minutes, so it can never pass the time check. It gives a random 1 to 30 points instead, so points can be shown live.
+
+Each course, badge and goal can only award its points once, so a repeated sync never counts anything twice.
+
+## Security
+
+- Passwords are hashed with BCrypt and never stored or sent back as plain text
+- Logins return a signed token (JWT) that lasts 7 days. Every request checks it against the account, so a suspended or deleted account loses access straight away, and roles are always read fresh
+- Repeated wrong logins are blocked for 5 minutes, per email and per address
+- Optional two-step login by email. Codes are 6 digits, stored only as a hash, work once, run out after 10 minutes, and stop working after 5 wrong tries. Turning it off needs the password
+- Forgot password gives the same answer whether the email has an account or not, so it can't be used to find out who is registered
+- Every database query uses prepared statements
+- Learners can only see and change their own goals, check-ins and study sessions. Administrator routes check the role on the server
+- The LearnTech API key stays on the server, encrypted when saved from the app
+- Fingerprint login saves only the login token, encrypted with a key in the phone's secure key storage that only unlocks with a fingerprint or face. The password is never saved
+- The database is backed up automatically once a day
+
+## What's in this repository
 
 | Folder | What it is |
 |---|---|
-| `app-android` | The Android application, written in Java |
-| `backend` | The Java backend and the MySQL database setup |
+| `app-android` | The Android app |
+| `backend` | The backend, and the database scripts in `backend/database` |
 
-## How the app code is organised
+**App** (`app-android/app/src/main/java/com/example/momentum`):
 
-The app now uses the real frontend and talks to the real backend. Log in, create account, goals and the admin user list and system activity all save to and load from the database.
-
-**Important: the backend has to be running for the app to work.** Until it is hosted online, that means running it on your own laptop and using the emulator. If it is not running, the app shows "Can't reach the server".
-
-| Folder in `app-android` | What it is |
+| Folder | What it is |
 |---|---|
-| `MainActivity.java` | The main learner screens: home, courses, goals, leaderboard and profile |
-| `activities` | The extra screens: login, sign up, achievements, momentum map, certificate, reminders, study coach, momentum coach and study timetable |
-| `admin` | The admin screens: dashboard, users, courses, modules, system activity and analytics |
-| `service` | The features the screens use, like logging in or saving a goal |
-| `data` | Talks to the backend over the internet |
-| `model` | Simple classes for users, courses, goals and so on |
+| `MainActivity.java` | The main screens: Home, Courses, Goals, Leaderboard and Profile |
+| `activities` | The other learner screens: login, sign up, settings, achievements, LearnTech, certificate, reminders, timetable and coaches |
+| `admin` | The administrator screens |
+| `service` | What the screens use, like logging in or saving a goal |
+| `data` | Talks to the backend, keeps the login session, settings and fingerprint login |
+| `model` | Simple classes for users, courses, goals, badges and so on |
 
-Screens that still show "will appear when data is connected" are waiting on a part of the backend that is not built yet, like the leaderboard and the learner's own courses.
+**Backend** (`backend/src/main/java/com/momentum/backend`):
 
-If you set up the database before the study timetable was added, run `backend/database/03_study_sessions.sql` once in MySQL Workbench. It adds the new table without deleting anything.
+| Folder | What it is |
+|---|---|
+| `App.java` | Starts the server, the routes, the scheduled sync and the daily backup |
+| `auth` | Register, login, login tokens and the login attempt limit |
+| `profile`, `courses`, `goals`, `leaderboard`, `sessions`, `admin` | The routes for each part of the app |
+| `db` | The database queries, one class per table or area |
+| `sync` | Copies courses and learner progress from LearnTech |
+| `rewards` | Awards badges and completes goals |
+| `learntech` | The LearnTech API client |
+| `backup` | The daily database backup |
+| `config` | Reads `config.properties` and encrypts the saved API key |
+| `model` | The classes sent to and from the app |
 
-To test, create an account in the app. To test the admin side, someone with database access has to change that account's role to `administrator`.
+## Running it
 
-## Video tutorial for GitHub Desktop
+### What you need
 
-[![Watch the video](https://img.youtube.com/vi/N6vPzWkPN_Y/hqdefault.jpg)](https://www.youtube.com/watch?v=N6vPzWkPN_Y)
+- Java 25 (the backend's build downloads it if needed)
+- MySQL 8
+- Android Studio, and an Android phone with USB debugging, or the emulator
 
-## Setup, you only do this once
+### 1. Database
 
-1. Accept the email invitation to this repository. If you do not have a GitHub account it will ask you to make one.
-2. Download GitHub Desktop from desktop.github.com and install it.
-3. Open GitHub Desktop and sign in with your GitHub account.
-4. Go to File, then Clone repository. Pick Momentum from the list.
-5. For the location, use something simple like `C:\Dev\Momentum`. Do not put it in OneDrive or anywhere that syncs, because it will fight with Android Studio and break things.
-6. Open Android Studio, choose Open, and point it at the `app-android` folder inside where you cloned it.
-7. Wait for Gradle to finish. The first time takes a few minutes.
+In MySQL Workbench, logged in as root:
 
-If Android Studio asks about an SDK or says something is missing, let it download what it needs.
+1. Open `backend/database/01_setup.sql`, change `CHANGE_ME` to a password for the app's database user, and run it. Don't save the file with the real password in it.
+2. Run `backend/database/02_schema.sql`. It creates every table.
 
-## Every time you work
+`03_study_sessions.sql` and `04_two_factor.sql` are only for a database set up before those features existed. Each adds what's missing without deleting anything. A database made with the current `02_schema.sql` already has both.
 
-Before you start:
+### 2. Backend
 
-1. Open GitHub Desktop
-2. Click Fetch origin, and then Pull if it offers
-3. Now open Android Studio and work
+1. In the `backend` folder, copy `config.example.properties` and name the copy `config.properties`.
+2. Fill in the database password from step 1, a long random `jwt.secret`, and the LearnTech API key. `config.properties` is in `.gitignore`, so it never goes to GitHub.
+3. Optional, for two-step login and forgot password: fill in the `mail.` settings. For Gmail, use an app password (Google Account, Security, 2-Step Verification, App passwords), not the account's normal password. Without them, the app says email isn't set up.
+4. Start it from the `backend` folder:
 
-This pulls down whatever everyone else has done. If you skip it you will be working on old code and you will cause a conflict later.
+   ```
+   .\gradlew run
+   ```
 
-When you finish:
+It's running when it prints `Momentum backend running on http://localhost:7070`, followed by the first sync. Open `http://localhost:7070/health` in a browser to check.
 
-1. Go back to GitHub Desktop
-2. You will see a list of what you changed
-3. Type a short summary of what you did, for example "Added login screen layout"
-4. Click Commit to main
-5. Click Push origin
+If it says "Communications link failure", MySQL isn't running. Start the MySQL80 service.
 
-Push at the end of every session, even if what you did is not finished. Sitting on changes for days is what causes the worst conflicts. A small push every day is much safer than one big push every week. And someone else could help finish or fix your code when they start working.
+### 3. App
 
-## Staying out of each other's way
+1. Open the `app-android` folder in Android Studio and let Gradle finish.
+2. The app talks to the backend at the address in `data/RealMomentumApi.java` (`BASE_URL`).
+   - **Phone over USB, backend on the same computer:** run `adb reverse tcp:7070 tcp:7070` once after plugging in, so the phone's `localhost` reaches the computer.
+   - **Emulator:** use `http://10.0.2.2:7070`.
+   - **Hosted backend:** put its `https://` address there.
+3. Run the app.
 
-We each take our own parts so that we are not editing the same files at the same time. The split will be decided on WhatsApp.
+### Accounts
 
-If you need to change something in someone else's part, message them first and wait for them to reply. It takes two minutes and it saves an hour of untangling later.
+Register in the app. An account is linked to a LearnTech learner automatically when its email matches theirs, and their courses and points come through on the next sync or login. To make an administrator, change the account's `role` to `administrator` in the `Users` table once. After that, administrators can manage roles from the app.
 
-## If something goes wrong
+## Main backend routes
 
-If GitHub Desktop says there is a conflict, stop and message Eben. Do not guess and do not click things to make the message go away, because that is how work gets lost.
+All routes except register, login, the password reset and `/health` need the login token. Admin routes also need the administrator role.
 
-If Android Studio will not build after a pull, try File, then Sync Project with Gradle Files, before assuming something is broken.
+| Route | What it does |
+|---|---|
+| `POST /register`, `POST /login`, `POST /login/verify` | Create an account, log in, the emailed two-step code |
+| `POST /password/forgot`, `POST /password/reset` | Email a reset code, reset the password with it |
+| `GET /me`, `PUT /me`, `PUT /me/password` | Your profile, points and streak; change your name or password |
+| `/me/two-factor/start`, `/confirm`, `/disable` | Turn two-step login on (with an emailed code) or off (with the password) |
+| `GET /me/courses`, `GET /courses` | Your courses, the whole catalogue |
+| `GET /me/badges`, `GET /me/progress` | Your badges, your progress over time |
+| `/goals`, `/goals/{id}`, `/goals/{id}/checkins` | Goals and check-ins |
+| `GET /leaderboard`, `GET /leaderboard?period=all` | This month's rankings, all-time rankings |
+| `/study-sessions` | The study timetable |
+| `/admin/users`, `/admin/courses`, `/admin/badges` | Manage users, courses and badges |
+| `/admin/settings`, `POST /admin/settings/test` | The LearnTech connection |
+| `GET /admin/stats`, `/admin/course-stats`, `/admin/logs` | Dashboard numbers and the activity log |
+| `GET /admin/export/{table}` | A table as CSV |
 
-## Things not to do
+## Working on the project
 
-Do not upload files through the GitHub website. Use GitHub Desktop so that everything is tracked properly.
-
-Do not commit anything with real data in it. Everything we use is test data.
-
-Do not worry about the files that never show up in GitHub Desktop, like `local.properties` and the `build` folders. Those are meant to be ignored and they are different on each of our machines.
+- Use GitHub Desktop. Fetch and pull before you start, and commit and push when you finish, even if it isn't done.
+- Never commit `config.properties`, backups, or anything with real data in it.
+- If GitHub Desktop shows a conflict, stop and ask before clicking anything.
+- If Android Studio won't build after a pull, try File, then Sync Project with Gradle Files.

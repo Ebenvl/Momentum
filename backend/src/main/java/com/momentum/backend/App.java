@@ -4,6 +4,7 @@ import com.auth0.jwt.interfaces.DecodedJWT;
 import com.momentum.backend.admin.AdminController;
 import com.momentum.backend.admin.SettingsController;
 import com.momentum.backend.auth.AuthController;
+import com.momentum.backend.auth.CodeService;
 import com.momentum.backend.auth.CurrentUser;
 import com.momentum.backend.auth.TokenService;
 import com.momentum.backend.backup.BackupService;
@@ -15,6 +16,7 @@ import com.momentum.backend.db.BadgeRepository;
 import com.momentum.backend.db.CheckInRepository;
 import com.momentum.backend.db.CourseRepository;
 import com.momentum.backend.db.Database;
+import com.momentum.backend.db.EmailCodeRepository;
 import com.momentum.backend.db.EnrolmentRepository;
 import com.momentum.backend.db.ExportRepository;
 import com.momentum.backend.db.GoalRepository;
@@ -27,6 +29,7 @@ import com.momentum.backend.db.StudySessionRepository;
 import com.momentum.backend.db.UserRepository;
 import com.momentum.backend.goals.GoalController;
 import com.momentum.backend.leaderboard.LeaderboardController;
+import com.momentum.backend.mail.EmailService;
 import com.momentum.backend.model.User;
 import com.momentum.backend.learntech.CoursesResponse;
 import com.momentum.backend.learntech.LearnTechClient;
@@ -94,14 +97,17 @@ public class App {
                 activityLogRepository, learnTechClient, encryption);
         settingsController.loadSavedSettings();
 
+        // Emailed codes, for two-step login and password resets.
+        CodeService codeService = new CodeService(new EmailCodeRepository(database), new EmailService(config));
+
         // Controllers handle requests from the app.
         TokenService tokenService = new TokenService(config);
         AuthController authController = new AuthController(userRepository, tokenService,
-                activityLogRepository, syncService);
+                activityLogRepository, syncService, codeService);
         GoalController goalController = new GoalController(goalRepository, checkInRepository, courseRepository,
                 streakRepository, goalChecker, badgeService);
         ProfileController profileController = new ProfileController(userRepository, snapshotRepository, pointsRepository,
-                streakRepository, badgeRepository);
+                streakRepository, badgeRepository, codeService, activityLogRepository);
         AdminController adminController = new AdminController(userRepository, courseRepository,
                 badgeRepository, activityLogRepository, statsRepository, exportRepository);
         CourseController courseController = new CourseController(courseRepository, enrolmentRepository);
@@ -159,6 +165,9 @@ public class App {
             // -----------------------------------------------------
             javalinConfig.routes.post("/register", authController::register);
             javalinConfig.routes.post("/login", authController::login);
+            javalinConfig.routes.post("/login/verify", authController::verifyLogin);
+            javalinConfig.routes.post("/password/forgot", authController::forgotPassword);
+            javalinConfig.routes.post("/password/reset", authController::resetPassword);
 
             // Runs before every request: if the app sent a valid login token, notes
             // who is asking so the routes can check it.
@@ -185,6 +194,9 @@ public class App {
             javalinConfig.routes.get("/me", profileController::getMe);
             javalinConfig.routes.put("/me", profileController::updateMe);
             javalinConfig.routes.put("/me/password", profileController::changePassword);
+            javalinConfig.routes.post("/me/two-factor/start", profileController::startTwoFactor);
+            javalinConfig.routes.post("/me/two-factor/confirm", profileController::confirmTwoFactor);
+            javalinConfig.routes.post("/me/two-factor/disable", profileController::disableTwoFactor);
             javalinConfig.routes.get("/me/progress", profileController::getProgress);
             javalinConfig.routes.get("/me/badges", profileController::getBadges);
 

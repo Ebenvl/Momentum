@@ -57,10 +57,80 @@ public class RealMomentumApi implements MomentumApi {
             body.put("password", password);
             JSONObject reply = new JSONObject(send("POST", "/login", body));
 
-            User user = new User(reply.getInt("userId"), null, email,
-                    reply.getString("fullName"), reply.getString("role"), "active");
-            Session.start(user, reply.getString("token"));
-            return user;
+            // Two-step login is on: the password was right and a code was emailed.
+            // null tells the login screen to ask for the code (see verifyLogin).
+            if (reply.optBoolean("codeRequired")) {
+                return null;
+            }
+            return startSession(reply, email);
+        });
+    }
+
+    @Override
+    public void verifyLogin(String email, String code, ApiCallback<User> callback) {
+        run(callback, () -> {
+            JSONObject body = new JSONObject();
+            body.put("email", email);
+            body.put("code", code);
+            return startSession(new JSONObject(send("POST", "/login/verify", body)), email);
+        });
+    }
+
+    // A login reply with a token: remembers who is logged in.
+    private User startSession(JSONObject reply, String email) throws Exception {
+        User user = new User(reply.getInt("userId"), null, email,
+                reply.getString("fullName"), reply.getString("role"), "active");
+        Session.start(user, reply.getString("token"));
+        return user;
+    }
+
+    @Override
+    public void forgotPassword(String email, ApiCallback<Void> callback) {
+        run(callback, () -> {
+            JSONObject body = new JSONObject();
+            body.put("email", email);
+            send("POST", "/password/forgot", body);
+            return null;
+        });
+    }
+
+    @Override
+    public void resetPassword(String email, String code, String newPassword, ApiCallback<Void> callback) {
+        run(callback, () -> {
+            JSONObject body = new JSONObject();
+            body.put("email", email);
+            body.put("code", code);
+            body.put("newPassword", newPassword);
+            send("POST", "/password/reset", body);
+            return null;
+        });
+    }
+
+    @Override
+    public void startTwoFactor(ApiCallback<Void> callback) {
+        run(callback, () -> {
+            send("POST", "/me/two-factor/start", new JSONObject());
+            return null;
+        });
+    }
+
+    @Override
+    public void confirmTwoFactor(String code, ApiCallback<Void> callback) {
+        run(callback, () -> {
+            JSONObject body = new JSONObject();
+            body.put("code", code);
+            send("POST", "/me/two-factor/confirm", body);
+            return null;
+        });
+    }
+
+    @Override
+    public void disableTwoFactor(String password, ApiCallback<Void> callback) {
+        run(callback, () -> {
+            JSONObject body = new JSONObject();
+            body.put("password", password);
+            send("POST", "/me/two-factor/disable", body);
+            return null;
         });
     }
 
@@ -86,6 +156,7 @@ public class RealMomentumApi implements MomentumApi {
             user.totalPoints = optInt(row, "totalPoints");
             user.currentStreak = optInt(row, "currentStreak");
             user.longestStreak = optInt(row, "longestStreak");
+            user.twoFactorEnabled = row.optBoolean("twoFactorEnabled");
             return user;
         });
     }

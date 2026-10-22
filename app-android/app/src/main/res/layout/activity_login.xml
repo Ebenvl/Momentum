@@ -135,6 +135,20 @@
                     android:textColor="@color/ltm_white"
                     android:textSize="16sp"
                     android:textStyle="bold" />
+
+                <!-- Only shown once fingerprint login is turned on, on this phone -->
+                <androidx.appcompat.widget.AppCompatButton
+                    android:id="@+id/btnBiometric"
+                    android:layout_width="match_parent"
+                    android:layout_height="54dp"
+                    android:layout_marginTop="12dp"
+                    android:background="@drawable/bg_input"
+                    android:text="Log in with fingerprint"
+                    android:textAllCaps="false"
+                    android:textColor="@color/ltm_blue"
+                    android:textSize="16sp"
+                    android:textStyle="bold"
+                    android:visibility="gone" />
             </LinearLayout>
 
             <TextView

@@ -20,7 +20,23 @@ import java.util.List;
 // so most calls don't need a user id.
 public interface MomentumApi {
 
+    // Gives back the user, or null if two-step login is on and a code was emailed.
     void login(String email, String password, ApiCallback<User> callback);
+
+    // The second step of a login: the code from the email.
+    void verifyLogin(String email, String code, ApiCallback<User> callback);
+
+    // Emails a password reset code, if the email has an account.
+    void forgotPassword(String email, ApiCallback<Void> callback);
+
+    void resetPassword(String email, String code, String newPassword, ApiCallback<Void> callback);
+
+    // Two-step login: emails a code, turns it on with that code, or off with the password.
+    void startTwoFactor(ApiCallback<Void> callback);
+
+    void confirmTwoFactor(String code, ApiCallback<Void> callback);
+
+    void disableTwoFactor(String password, ApiCallback<Void> callback);
 
     void register(String email, String password, String fullName, ApiCallback<Void> callback);
 

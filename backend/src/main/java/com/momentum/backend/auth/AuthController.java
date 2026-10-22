@@ -2,6 +2,7 @@ package com.momentum.backend.auth;
 
 import com.momentum.backend.db.ActivityLogRepository;
 import com.momentum.backend.db.UserRepository;
+import com.momentum.backend.model.CodeRequest;
 import com.momentum.backend.model.LoginRequest;
 import com.momentum.backend.model.RegisterRequest;
 import com.momentum.backend.model.User;
@@ -21,13 +22,16 @@ public class AuthController {
     private final ActivityLogRepository activityLogRepository;
     private final SyncService syncService;
     private final LoginLimiter loginLimiter = new LoginLimiter();
+    private final CodeService codeService;
 
     public AuthController(UserRepository userRepository, TokenService tokenService,
-                          ActivityLogRepository activityLogRepository, SyncService syncService) {
+                          ActivityLogRepository activityLogRepository, SyncService syncService,
+                          CodeService codeService) {
         this.userRepository = userRepository;
         this.tokenService = tokenService;
         this.activityLogRepository = activityLogRepository;
         this.syncService = syncService;
+        this.codeService = codeService;
     }
 
     // -----------------------------------------------------
@@ -160,23 +164,160 @@ public class AuthController {
                 return;
             }
 
-            // Records the login time.
-            userRepository.updateLastLogin(user.userId);
-            activityLogRepository.log(user.userId, "logged in", "info");
+            // Two-step login is on: the password was right, but they only get in
+            // with the code emailed to them (see verifyLogin).
+            if (user.twoFactorEnabled) {
+                CodeService.SendResult sent = codeService.sendCode(user, "login");
+                if (sent == CodeService.SendResult.EMAIL_NOT_SET_UP || sent == CodeService.SendResult.FAILED) {
+                    ctx.status(503).json(Map.of("error", "couldn't send your login code, try again later"));
+                    return;
+                }
+                ctx.json(Map.of("message", "code sent", "codeRequired", true));
+                return;
+            }
 
-            // Brings their courses and points up to date, without making login wait.
-            syncService.syncUserInBackground(user);
-
-            String token = tokenService.createToken(user);
-
-            ctx.json(Map.of(
-                "message", "logged in",
-                "token", token,
-                "userId", user.userId,
-                "fullName", user.fullName,
-                "role", user.role));
+            finishLogin(ctx, user);
         } catch (SQLException e) {
             ctx.status(500).json(Map.of("error", "something went wrong, try again"));
         }
+    }
+
+    // -----------------------------------------------------
+    // POST /login/verify   the second step: the emailed code
+    // -----------------------------------------------------
+    public void verifyLogin(Context ctx) {
+
+        CodeRequest request;
+        try {
+            request = ctx.bodyAsClass(CodeRequest.class);
+        } catch (Exception e) {
+            ctx.status(400).json(Map.of("error", "invalid request"));
+            return;
+        }
+        if (request.email == null || request.code == null) {
+            ctx.status(400).json(Map.of("error", "enter the code from the email"));
+            return;
+        }
+
+        String emailKey = "email:" + request.email.trim().toLowerCase();
+        if (loginLimiter.isBlocked(emailKey, LoginLimiter.MAX_PER_EMAIL)) {
+            ctx.status(429).json(Map.of("error", "too many wrong tries, wait 5 minutes and try again"));
+            return;
+        }
+
+        try {
+            User user = userRepository.findUserByEmail(request.email);
+            if (user == null || !"active".equals(user.status) || !codeService.checkCode(user, "login", request.code)) {
+                loginLimiter.recordFailure(emailKey);
+                if (user != null) {
+                    activityLogRepository.log(user.userId, "failed login: wrong code", "warning");
+                }
+                ctx.status(401).json(Map.of("error", "that code is wrong or has run out"));
+                return;
+            }
+            loginLimiter.clear(emailKey);
+            finishLogin(ctx, user);
+        } catch (SQLException e) {
+            ctx.status(500).json(Map.of("error", "something went wrong, try again"));
+        }
+    }
+
+    // -----------------------------------------------------
+    // POST /password/forgot   emails a reset code
+    // Always gives the same answer, whether the email has an account or not,
+    // so it can't be used to find out who is registered.
+    // -----------------------------------------------------
+    public void forgotPassword(Context ctx) {
+
+        CodeRequest request;
+        try {
+            request = ctx.bodyAsClass(CodeRequest.class);
+        } catch (Exception e) {
+            ctx.status(400).json(Map.of("error", "invalid request"));
+            return;
+        }
+        if (request.email == null || request.email.isBlank()) {
+            ctx.status(400).json(Map.of("error", "email is required"));
+            return;
+        }
+        if (!codeService.emailIsSetUp()) {
+            ctx.status(503).json(Map.of("error", "password reset by email isn't set up, ask an administrator"));
+            return;
+        }
+
+        try {
+            User user = userRepository.findUserByEmail(request.email);
+            if (user != null && "active".equals(user.status)) {
+                codeService.sendCode(user, "reset");
+                activityLogRepository.log(user.userId, "password reset code sent", "info");
+            }
+            ctx.json(Map.of("message", "if that email has an account, a code is on its way"));
+        } catch (SQLException e) {
+            ctx.status(500).json(Map.of("error", "something went wrong, try again"));
+        }
+    }
+
+    // -----------------------------------------------------
+    // POST /password/reset   the code from the email, and the new password
+    // -----------------------------------------------------
+    public void resetPassword(Context ctx) {
+
+        CodeRequest request;
+        try {
+            request = ctx.bodyAsClass(CodeRequest.class);
+        } catch (Exception e) {
+            ctx.status(400).json(Map.of("error", "invalid request"));
+            return;
+        }
+        if (request.email == null || request.code == null || request.newPassword == null) {
+            ctx.status(400).json(Map.of("error", "enter the code and a new password"));
+            return;
+        }
+        if (request.newPassword.length() < 8 || request.newPassword.length() > 72) {
+            ctx.status(400).json(Map.of("error", "password must be 8 to 72 characters"));
+            return;
+        }
+
+        String emailKey = "email:" + request.email.trim().toLowerCase();
+        if (loginLimiter.isBlocked(emailKey, LoginLimiter.MAX_PER_EMAIL)) {
+            ctx.status(429).json(Map.of("error", "too many wrong tries, wait 5 minutes and try again"));
+            return;
+        }
+
+        try {
+            User user = userRepository.findUserByEmail(request.email);
+            if (user == null || !codeService.checkCode(user, "reset", request.code)) {
+                loginLimiter.recordFailure(emailKey);
+                ctx.status(400).json(Map.of("error", "that code is wrong or has run out"));
+                return;
+            }
+            userRepository.updatePassword(user.userId, BCrypt.hashpw(request.newPassword, BCrypt.gensalt()));
+            loginLimiter.clear(emailKey);
+            activityLogRepository.log(user.userId, "password reset", "info");
+            ctx.json(Map.of("message", "password changed, you can log in now"));
+        } catch (SQLException e) {
+            ctx.status(500).json(Map.of("error", "something went wrong, try again"));
+        }
+    }
+
+    // Everything after a successful login: records it, starts the background
+    // sync, and gives the app its login token.
+    private void finishLogin(Context ctx, User user) throws SQLException {
+
+        // Records the login time.
+        userRepository.updateLastLogin(user.userId);
+        activityLogRepository.log(user.userId, "logged in", "info");
+
+        // Brings their courses and points up to date, without making login wait.
+        syncService.syncUserInBackground(user);
+
+        String token = tokenService.createToken(user);
+
+        ctx.json(Map.of(
+            "message", "logged in",
+            "token", token,
+            "userId", user.userId,
+            "fullName", user.fullName,
+            "role", user.role));
     }
 }
