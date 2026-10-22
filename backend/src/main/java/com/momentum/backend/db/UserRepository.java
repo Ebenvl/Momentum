@@ -180,6 +180,34 @@ public class UserRepository {
         }
     }
 
+    // A user changing their own name.
+    public boolean updateName(int userId, String fullName) throws SQLException {
+
+        String sql = "UPDATE Users SET full_name = ? WHERE user_id = ?";
+
+        try (Connection connection = database.getConnection();
+             PreparedStatement statement = connection.prepareStatement(sql)) {
+
+            statement.setString(1, fullName);
+            statement.setInt(2, userId);
+            return statement.executeUpdate() == 1;
+        }
+    }
+
+    // Saves a new password hash.
+    public boolean updatePassword(int userId, String passwordHash) throws SQLException {
+
+        String sql = "UPDATE Users SET password_hash = ? WHERE user_id = ?";
+
+        try (Connection connection = database.getConnection();
+             PreparedStatement statement = connection.prepareStatement(sql)) {
+
+            statement.setString(1, passwordHash);
+            statement.setInt(2, userId);
+            return statement.executeUpdate() == 1;
+        }
+    }
+
     // Admin: change someone's name and role.
     public boolean updateUserDetails(int userId, String fullName, String role) throws SQLException {
 

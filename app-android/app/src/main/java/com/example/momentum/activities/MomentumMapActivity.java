@@ -13,7 +13,6 @@ import android.widget.GridLayout;
 import android.widget.TextView;
 import android.widget.Toast;
 
-import androidx.appcompat.app.AppCompatActivity;
 
 import com.example.momentum.R;
 import com.example.momentum.data.Session;
@@ -25,7 +24,7 @@ import java.util.HashSet;
 import java.util.Locale;
 import java.util.Set;
 
-public class MomentumMapActivity extends AppCompatActivity {
+public class MomentumMapActivity extends BaseActivity {
 
     private TextView tvMonth;
     private TextView tvStudyStreak;

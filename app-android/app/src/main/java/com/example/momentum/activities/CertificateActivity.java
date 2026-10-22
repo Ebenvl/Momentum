@@ -14,7 +14,6 @@ import android.widget.Toast;
 
 import androidx.activity.result.ActivityResultLauncher;
 import androidx.activity.result.contract.ActivityResultContracts;
-import androidx.appcompat.app.AppCompatActivity;
 
 import com.example.momentum.R;
 import com.example.momentum.data.Session;
@@ -24,7 +23,7 @@ import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.Locale;
 
-public class CertificateActivity extends AppCompatActivity {
+public class CertificateActivity extends BaseActivity {
 
     private TextView tvCertificateStudent;
     private TextView tvCertificateCourse;

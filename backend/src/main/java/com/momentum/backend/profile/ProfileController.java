@@ -6,10 +6,12 @@ import com.momentum.backend.db.PointsRepository;
 import com.momentum.backend.db.SnapshotRepository;
 import com.momentum.backend.db.StreakRepository;
 import com.momentum.backend.db.UserRepository;
+import com.momentum.backend.model.PasswordRequest;
 import com.momentum.backend.model.ProfileRequest;
 import com.momentum.backend.model.Streak;
 import com.momentum.backend.model.User;
 import io.javalin.http.Context;
+import org.mindrot.jbcrypt.BCrypt;
 
 import java.sql.SQLException;
 import java.util.Map;
@@ -105,6 +107,22 @@ public class ProfileController {
             ctx.status(400).json(Map.of("error", "full name is required"));
             return;
         }
+        if (request.fullName.length() > 150) {
+            ctx.status(400).json(Map.of("error", "full name can be at most 150 characters"));
+            return;
+        }
+
+        // Only a name was sent, from the settings screen: change just the name.
+        if (request.reminderEnabled == null && request.reminderDaysBefore == null) {
+            try {
+                userRepository.updateName(userId, request.fullName.trim());
+                ctx.json(Map.of("message", "profile updated"));
+            } catch (SQLException e) {
+                ctx.status(500).json(Map.of("error", "something went wrong, try again"));
+            }
+            return;
+        }
+
         if (request.reminderEnabled == null) {
             ctx.status(400).json(Map.of("error", "reminder on or off is required"));
             return;
@@ -122,6 +140,54 @@ public class ProfileController {
             } else {
                 ctx.status(404).json(Map.of("error", "account not found"));
             }
+        } catch (SQLException e) {
+            ctx.status(500).json(Map.of("error", "something went wrong, try again"));
+        }
+    }
+
+    // -----------------------------------------------------
+    // PUT /me/password   change your own password
+    // The current password has to be right, so a phone left logged in
+    // can't be used to take over the account.
+    // -----------------------------------------------------
+    public void changePassword(Context ctx) {
+
+        Integer userId = CurrentUser.id(ctx);
+        if (userId == null) {
+            ctx.status(401).json(Map.of("error", "please log in"));
+            return;
+        }
+
+        PasswordRequest request;
+        try {
+            request = ctx.bodyAsClass(PasswordRequest.class);
+        } catch (Exception e) {
+            ctx.status(400).json(Map.of("error", "invalid request"));
+            return;
+        }
+
+        if (request.currentPassword == null || request.newPassword == null) {
+            ctx.status(400).json(Map.of("error", "enter your current and new password"));
+            return;
+        }
+        if (request.newPassword.length() < 8) {
+            ctx.status(400).json(Map.of("error", "password must be at least 8 characters"));
+            return;
+        }
+        if (request.newPassword.length() > 72) {
+            ctx.status(400).json(Map.of("error", "password can be at most 72 characters"));
+            return;
+        }
+
+        try {
+            User user = userRepository.findUserById(userId);
+            if (user == null || !BCrypt.checkpw(request.currentPassword, user.passwordHash)) {
+                ctx.status(400).json(Map.of("error", "your current password is wrong"));
+                return;
+            }
+
+            userRepository.updatePassword(userId, BCrypt.hashpw(request.newPassword, BCrypt.gensalt()));
+            ctx.json(Map.of("message", "password changed"));
         } catch (SQLException e) {
             ctx.status(500).json(Map.of("error", "something went wrong, try again"));
         }

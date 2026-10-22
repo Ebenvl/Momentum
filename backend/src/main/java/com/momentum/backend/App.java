@@ -4,6 +4,7 @@ import com.auth0.jwt.interfaces.DecodedJWT;
 import com.momentum.backend.admin.AdminController;
 import com.momentum.backend.admin.SettingsController;
 import com.momentum.backend.auth.AuthController;
+import com.momentum.backend.auth.CurrentUser;
 import com.momentum.backend.auth.TokenService;
 import com.momentum.backend.backup.BackupService;
 import com.momentum.backend.config.Config;
@@ -26,6 +27,7 @@ import com.momentum.backend.db.StudySessionRepository;
 import com.momentum.backend.db.UserRepository;
 import com.momentum.backend.goals.GoalController;
 import com.momentum.backend.leaderboard.LeaderboardController;
+import com.momentum.backend.model.User;
 import com.momentum.backend.learntech.CoursesResponse;
 import com.momentum.backend.learntech.LearnTechClient;
 import com.momentum.backend.learntech.LearnTechException;
@@ -135,7 +137,12 @@ public class App {
 
             // Can the backend reach the LearnTech API?
             // Only says if it worked and how many courses there are, no other data.
+            // Admins only, because every call makes a request to LearnTech.
             javalinConfig.routes.get("/health/learntech", ctx -> {
+                if (!CurrentUser.isAdmin(ctx)) {
+                    ctx.status(403).json(Map.of("error", "administrators only"));
+                    return;
+                }
                 try {
                     CoursesResponse courses = learnTechClient.getCourses();
                     ctx.json(Map.of("learntech", "ok", "courses", courses.count));
@@ -153,13 +160,21 @@ public class App {
             javalinConfig.routes.post("/register", authController::register);
             javalinConfig.routes.post("/login", authController::login);
 
+            // Runs before every request: if the app sent a valid login token, notes
+            // who is asking so the routes can check it.
             javalinConfig.routes.before(ctx -> {
                 String header = ctx.header("Authorization");
                 if (header != null && header.startsWith("Bearer ")) {
                     DecodedJWT token = tokenService.verifyToken(header.substring(7));
                     if (token != null) {
-                        ctx.attribute("userId", Integer.parseInt(token.getSubject()));
-                        ctx.attribute("role", token.getClaim("role").asString());
+                        // The account must still exist and be active, and the role is read
+                        // fresh, so a suspend, delete or role change works straight away
+                        // instead of only when the 7-day token runs out.
+                        User user = userRepository.findUserById(Integer.parseInt(token.getSubject()));
+                        if (user != null && "active".equals(user.status)) {
+                            ctx.attribute("userId", user.userId);
+                            ctx.attribute("role", user.role);
+                        }
                     }
                 }
             });
@@ -169,6 +184,7 @@ public class App {
             // -----------------------------------------------------
             javalinConfig.routes.get("/me", profileController::getMe);
             javalinConfig.routes.put("/me", profileController::updateMe);
+            javalinConfig.routes.put("/me/password", profileController::changePassword);
             javalinConfig.routes.get("/me/progress", profileController::getProgress);
             javalinConfig.routes.get("/me/badges", profileController::getBadges);
 
@@ -207,6 +223,7 @@ public class App {
             // Admin (see admin/AdminController.java)
             // -----------------------------------------------------
             javalinConfig.routes.get("/admin/stats", adminController::getStats);
+            javalinConfig.routes.get("/admin/course-stats", adminController::getCourseStats);
             javalinConfig.routes.get("/admin/users", adminController::getUsers);
             javalinConfig.routes.post("/admin/users", adminController::createUser);
             javalinConfig.routes.get("/admin/users/{id}", adminController::getUser);

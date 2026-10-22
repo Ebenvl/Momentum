@@ -17,7 +17,7 @@ import com.example.momentum.R;
 
 import java.util.Locale;
 
-public class StudyCoachActivity extends AppCompatActivity {
+public class StudyCoachActivity extends BaseActivity {
 
     private LinearLayout chatMessages;
     private EditText editMessage;

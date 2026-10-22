@@ -2,10 +2,14 @@ package com.example.momentum.data;
 
 import com.example.momentum.model.ActivityLog;
 import com.example.momentum.model.AdminStats;
+import com.example.momentum.model.Badge;
+import com.example.momentum.model.CheckIn;
 import com.example.momentum.model.Course;
+import com.example.momentum.model.CourseStat;
 import com.example.momentum.model.Enrolment;
 import com.example.momentum.model.Goal;
 import com.example.momentum.model.LeaderboardEntry;
+import com.example.momentum.model.PlatformSettings;
 import com.example.momentum.model.StudySession;
 import com.example.momentum.model.User;
 
@@ -20,19 +24,39 @@ public interface MomentumApi {
 
     void register(String email, String password, String fullName, ApiCallback<Void> callback);
 
+    // The learner's own profile, with their all-time points, streak and whether they're linked.
+    void getMe(ApiCallback<User> callback);
+
+    // Changes the user's own name.
+    void updateName(String fullName, ApiCallback<Void> callback);
+
+    // Changes the user's own password. The current one has to be right.
+    void changePassword(String currentPassword, String newPassword, ApiCallback<Void> callback);
+
+    // The badges the learner has earned, newest first.
+    void getMyBadges(ApiCallback<List<Badge>> callback);
+
     void getCatalogue(ApiCallback<List<Course>> callback);
 
     void getMyCourses(ApiCallback<List<Enrolment>> callback);
 
     void getGoals(ApiCallback<List<Goal>> callback);
 
-    void createGoal(String title, Integer targetCourseId, String targetDate, ApiCallback<Void> callback);
-
     void setGoalStatus(int goalId, String status, ApiCallback<Void> callback);
 
     void deleteGoal(int goalId, ApiCallback<Void> callback);
 
-    void getLeaderboard(ApiCallback<List<LeaderboardEntry>> callback);
+    // A null id adds a new goal, otherwise that goal is updated.
+    // goalType is free_text, complete_specific_course, complete_n_courses, spend_minutes or active_days.
+    void saveGoal(Integer goalId, String title, String goalType, Integer targetValue,
+                  Integer targetCourseId, String targetDate, ApiCallback<Void> callback);
+
+    void logCheckIn(int goalId, String note, Integer valueLogged, ApiCallback<Void> callback);
+
+    void getCheckIns(int goalId, ApiCallback<List<CheckIn>> callback);
+
+    // This month's rankings, or all time when allTime is true.
+    void getLeaderboard(boolean allTime, ApiCallback<List<LeaderboardEntry>> callback);
 
     void getStudySessions(ApiCallback<List<StudySession>> callback);
 
@@ -48,4 +72,39 @@ public interface MomentumApi {
     void deleteUser(int userId, ApiCallback<Void> callback);
 
     void getActivityLogs(ApiCallback<List<ActivityLog>> callback);
+
+    // Admin: enrolled and completed per course, for the engagement screen.
+    void getCourseStats(ApiCallback<List<CourseStat>> callback);
+
+    // Admin: accounts
+    void createUser(String email, String password, String fullName, String role, ApiCallback<Void> callback);
+
+    void updateUser(int userId, String fullName, String role, ApiCallback<Void> callback);
+
+    // status is active or suspended
+    void setUserStatus(int userId, String status, ApiCallback<Void> callback);
+
+    // A null idst unlinks the account.
+    void linkUser(int userId, Integer idst, ApiCallback<Void> callback);
+
+    // Admin: courses. Either value can be null, which clears it.
+    void updateCourse(int courseId, Integer pointsValue, Integer expectedMinutes, ApiCallback<Void> callback);
+
+    // Admin: badges. A null id adds a new badge, otherwise that badge is updated.
+    void getAllBadges(ApiCallback<List<Badge>> callback);
+
+    void saveBadge(Integer badgeId, Badge badge, ApiCallback<Void> callback);
+
+    void deleteBadge(int badgeId, ApiCallback<Void> callback);
+
+    // Admin: the LearnTech connection. An empty key or secret keeps the saved one.
+    void getSettings(ApiCallback<PlatformSettings> callback);
+
+    void saveSettings(String platformUrl, String apiKey, String apiSecret, ApiCallback<Void> callback);
+
+    // Gives back how many courses LearnTech has, if it connected.
+    void testConnection(ApiCallback<Integer> callback);
+
+    // Admin: a whole table as CSV text, for example "users" or "points".
+    void exportTable(String table, ApiCallback<String> callback);
 }

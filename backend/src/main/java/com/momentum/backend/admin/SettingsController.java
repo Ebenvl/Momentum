@@ -108,10 +108,16 @@ public class SettingsController {
         try {
             PlatformSettings saved = platformConfigRepository.findSettings();
 
+            // A new address needs the key typed in again. Otherwise someone with an
+            // admin login could point the backend at their own server and receive the key.
+            boolean newKey = request.apiKey != null && !request.apiKey.isBlank();
+            if (!url.equals(learnTechClient.getBaseUrl()) && !newKey) {
+                ctx.status(400).json(Map.of("error", "enter the API key again when changing the address"));
+                return;
+            }
+
             // A new key if one was typed in, otherwise keep the one in use now.
-            String apiKey = request.apiKey != null && !request.apiKey.isBlank()
-                    ? request.apiKey.trim()
-                    : learnTechClient.getApiKey();
+            String apiKey = newKey ? request.apiKey.trim() : learnTechClient.getApiKey();
 
             // Same for the secret. It's optional, the API only needs the key.
             String secretEncrypted = request.apiSecret != null && !request.apiSecret.isBlank()

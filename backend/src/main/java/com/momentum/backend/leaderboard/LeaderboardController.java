@@ -18,7 +18,8 @@ public class LeaderboardController {
     }
 
     // -----------------------------------------------------
-    // GET /leaderboard   this month's points, highest first
+    // GET /leaderboard               this month's points, highest first
+    // GET /leaderboard?period=all    points from every month
     // -----------------------------------------------------
     public void getLeaderboard(Context ctx) {
 
@@ -27,8 +28,8 @@ public class LeaderboardController {
             return;
         }
 
-        // The current month, like "2026-10".
-        String monthKey = YearMonth.now().toString();
+        // The current month, like "2026-10", or null for all time.
+        String monthKey = "all".equals(ctx.queryParam("period")) ? null : YearMonth.now().toString();
 
         try {
             ctx.json(pointsRepository.findLeaderboard(monthKey));

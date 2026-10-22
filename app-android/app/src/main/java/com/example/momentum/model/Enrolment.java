@@ -6,4 +6,5 @@ public class Enrolment {
     public String state;        // "not_started", "in_progress" or "completed"
     public int timeSpentMinutes;
     public String completedOn;  // yyyy-MM-dd, null until completed
+    public Integer pointsEarned; // what this course gave the learner, null until it gives any
 }

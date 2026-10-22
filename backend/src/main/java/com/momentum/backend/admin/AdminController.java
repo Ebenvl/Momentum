@@ -82,6 +82,10 @@ public class AdminController {
             ctx.status(400).json(Map.of("error", "full name is required"));
             return;
         }
+        if (request.email.length() > 255 || request.fullName.length() > 150) {
+            ctx.status(400).json(Map.of("error", "email or name is too long"));
+            return;
+        }
         if (!request.email.contains("@")) {
             ctx.status(400).json(Map.of("error", "email is not valid"));
             return;
@@ -152,6 +156,10 @@ public class AdminController {
 
         if (request.fullName == null || request.fullName.isBlank()) {
             ctx.status(400).json(Map.of("error", "full name is required"));
+            return;
+        }
+        if (request.fullName.length() > 150) {
+            ctx.status(400).json(Map.of("error", "full name can be at most 150 characters"));
             return;
         }
         if (request.role == null || !List.of("learner", "administrator").contains(request.role)) {
@@ -310,6 +318,22 @@ public class AdminController {
 
         try {
             ctx.json(statsRepository.getAdminStats());
+        } catch (SQLException e) {
+            ctx.status(500).json(Map.of("error", "something went wrong, try again"));
+        }
+    }
+
+    // -----------------------------------------------------
+    // GET /admin/course-stats   enrolled and completed per course
+    // -----------------------------------------------------
+    public void getCourseStats(Context ctx) {
+
+        if (!requireAdmin(ctx)) {
+            return;
+        }
+
+        try {
+            ctx.json(statsRepository.getCourseStats());
         } catch (SQLException e) {
             ctx.status(500).json(Map.of("error", "something went wrong, try again"));
         }
@@ -675,6 +699,12 @@ public class AdminController {
     private String checkBadge(BadgeRequest request) {
         if (request.name == null || request.name.isBlank()) {
             return "badge name is required";
+        }
+        if (request.name.length() > 100) {
+            return "badge name can be at most 100 characters";
+        }
+        if (request.imageUrl != null && request.imageUrl.length() > 500) {
+            return "image link can be at most 500 characters";
         }
         if (request.ruleType == null || !BADGE_RULES.contains(request.ruleType)) {
             return "rule must be courses_completed, streak_days or total_points";

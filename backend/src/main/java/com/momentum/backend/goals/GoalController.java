@@ -291,6 +291,10 @@ public class GoalController {
             return;
         }
 
+        if (request.note != null && request.note.length() > 1000) {
+            ctx.status(400).json(Map.of("error", "note can be at most 1000 characters"));
+            return;
+        }
         if (request.valueLogged != null && request.valueLogged < 0) {
             ctx.status(400).json(Map.of("error", "value can't be negative"));
             return;
@@ -356,6 +360,9 @@ public class GoalController {
     private String checkGoal(GoalRequest request) {
         if (request.title == null || request.title.isBlank()) {
             return "title is required";
+        }
+        if (request.title.length() > 255) {
+            return "title can be at most 255 characters";
         }
         if (request.goalType == null || !GOAL_TYPES.contains(request.goalType)) {
             return "goal type is not valid";

@@ -15,5 +15,6 @@ public class Enrolment {
     public String firstAccess;
     public String completedOn;
     public String lastSyncedAt;
+    public Integer pointsEarned;      // null until the course earns points
 
 }

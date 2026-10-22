@@ -197,6 +197,32 @@
             android:textColor="@color/ltm_navy"
             android:textSize="15sp" />
 
+
+        <!-- Badges earned from the backend's badge rules, set up by the admin -->
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="26dp"
+            android:text="Earned Badges"
+            android:textColor="@color/ltm_navy"
+            android:textSize="22sp"
+            android:textStyle="bold" />
+
+        <TextView
+            android:id="@+id/tvNoEarnedBadges"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:text="No badges earned yet. Keep learning to unlock them!"
+            android:textColor="@color/ltm_muted"
+            android:textSize="13sp" />
+
+        <LinearLayout
+            android:id="@+id/llEarnedBadges"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical" />
+
         <Button
             android:id="@+id/btnBack"
             android:layout_width="match_parent"

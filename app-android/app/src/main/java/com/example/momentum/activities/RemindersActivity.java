@@ -24,7 +24,7 @@ import com.example.momentum.R;
 import java.util.Calendar;
 import java.util.Locale;
 
-public class RemindersActivity extends AppCompatActivity {
+public class RemindersActivity extends BaseActivity {
 
     private static final int NOTIFICATION_PERMISSION_CODE = 101;
     private static final String PREFS_NAME = "StudyReminderPrefs";

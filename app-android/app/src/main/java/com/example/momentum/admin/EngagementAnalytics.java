@@ -1,5 +1,6 @@
 package com.example.momentum.admin;
 
+import com.example.momentum.activities.BaseActivity;
 import android.graphics.Color;
 import android.graphics.drawable.GradientDrawable;
 import android.os.Bundle;
@@ -8,10 +9,19 @@ import android.view.View;
 import android.widget.LinearLayout;
 import android.widget.ScrollView;
 import android.widget.TextView;
+import android.widget.Toast;
 
-import androidx.appcompat.app.AppCompatActivity;
 
-public class EngagementAnalytics extends AppCompatActivity {
+import com.example.momentum.data.ApiCallback;
+import com.example.momentum.model.AdminStats;
+import com.example.momentum.model.CourseStat;
+import com.example.momentum.model.LeaderboardEntry;
+import com.example.momentum.service.AdminService;
+import com.example.momentum.service.LeaderboardService;
+
+import java.util.List;
+
+public class EngagementAnalytics extends BaseActivity {
 
     private final int NAVY = Color.rgb(7, 29, 53);
     private final int GOLD = Color.rgb(244, 185, 66);
@@ -23,6 +33,13 @@ public class EngagementAnalytics extends AppCompatActivity {
     private final int PALE = Color.rgb(244, 246, 250);
 
     private LinearLayout content;
+
+
+    // Filled from the backend once the screen is built
+    private final AdminService adminService = new AdminService();
+    private final LeaderboardService leaderboardService = new LeaderboardService();
+    private TextView activeStat, completionStat, timeStat, participationStat;
+    private LinearLayout learnerCard, courseCard;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -70,20 +87,23 @@ public class EngagementAnalytics extends AppCompatActivity {
 
         LinearLayout row1 = makeRow();
         content.addView(row1);
-        addStat(row1, "Active learners", "—", PURPLE);
-        addStat(row1, "Course completion", "—", TEAL);
+        activeStat = addStat(row1, "Active learners", "—", PURPLE);
+        completionStat = addStat(row1, "Course completion", "—", TEAL);
 
         LinearLayout row2 = makeRow();
         LinearLayout.LayoutParams rowParams =
                 new LinearLayout.LayoutParams(-1, -2);
         rowParams.topMargin = dp(12);
         content.addView(row2, rowParams);
-        addStat(row2, "Time learning", "—", GOLD);
-        addStat(row2, "Participation", "—", ORANGE);
+        timeStat = addStat(row2, "Time learning", "—", GOLD);
+        participationStat = addStat(row2, "Participation", "—", ORANGE);
 
         addSectionTitle("Learner engagement");
 
-        addEmptyCard(
+        learnerCard = new LinearLayout(this);
+        learnerCard.setOrientation(LinearLayout.VERTICAL);
+        content.addView(learnerCard);
+        addEmptyCard(learnerCard,
                 "No engagement data yet",
                 "Learner activity and participation summaries "
                         + "will appear here when real data is available."
@@ -91,22 +111,17 @@ public class EngagementAnalytics extends AppCompatActivity {
 
         addSectionTitle("Course performance");
 
-        addEmptyCard(
+        courseCard = new LinearLayout(this);
+        courseCard.setOrientation(LinearLayout.VERTICAL);
+        content.addView(courseCard);
+        addEmptyCard(courseCard,
                 "No course data yet",
                 "Course completion comparisons will appear here "
                         + "once courses and learner activity are connected."
         );
 
-        addSectionTitle("Engagement trends");
-
-        addEmptyCard(
-                "No trend data yet",
-                "Engagement charts will be available when historical "
-                        + "activity data is provided by the backend."
-        );
-
         TextView footer = text(
-                "LEARNTECH ADMIN • DEVELOPMENT PREVIEW",
+                "LEARNTECH ADMIN",
                 10, MUTED, true);
         footer.setGravity(Gravity.CENTER);
         LinearLayout.LayoutParams footerParams =
@@ -115,6 +130,92 @@ public class EngagementAnalytics extends AppCompatActivity {
         content.addView(footer, footerParams);
 
         setContentView(root);
+        loadData();
+    }
+
+
+    // Fills the overview, the most engaged learners and the course numbers.
+    private void loadData() {
+        adminService.getStats(new ApiCallback<AdminStats>() {
+            @Override
+            public void onSuccess(AdminStats stats) {
+                activeStat.setText(String.valueOf(stats.activeLearners));
+                completionStat.setText(stats.completionRate + "%");
+                timeStat.setText(stats.totalMinutes >= 60
+                        ? (stats.totalMinutes / 60) + " h" : stats.totalMinutes + " min");
+                participationStat.setText(stats.engagement + "%");
+            }
+
+            @Override
+            public void onError(String message) {
+                Toast.makeText(EngagementAnalytics.this, message, Toast.LENGTH_LONG).show();
+            }
+        });
+
+        // The learners with the most points of all time, top 5
+        leaderboardService.getLeaderboard(true, new ApiCallback<List<LeaderboardEntry>>() {
+            @Override
+            public void onSuccess(List<LeaderboardEntry> entries) {
+                if (entries.isEmpty()) {
+                    return;
+                }
+                learnerCard.removeAllViews();
+                LinearLayout box = whiteBox(learnerCard);
+                box.addView(text("Most points, all time", 13, MUTED, false));
+                for (int i = 0; i < Math.min(5, entries.size()); i++) {
+                    LeaderboardEntry entry = entries.get(i);
+                    box.addView(numberRow(entry.rank + ".  " + entry.name, entry.points + " XP"));
+                }
+            }
+
+            @Override
+            public void onError(String message) {
+                // Keeps the "no data" card
+            }
+        });
+
+        // Each course: completed out of enrolled
+        adminService.getCourseStats(new ApiCallback<List<CourseStat>>() {
+            @Override
+            public void onSuccess(List<CourseStat> courseStats) {
+                if (courseStats.isEmpty()) {
+                    return;
+                }
+                courseCard.removeAllViews();
+                LinearLayout box = whiteBox(courseCard);
+                box.addView(text("Completed out of enrolled", 13, MUTED, false));
+                for (CourseStat courseStat : courseStats) {
+                    int percent = Math.round(courseStat.completed * 100f / courseStat.enrolled);
+                    box.addView(numberRow(courseStat.courseName,
+                            courseStat.completed + " / " + courseStat.enrolled + "  (" + percent + "%)"));
+                }
+            }
+
+            @Override
+            public void onError(String message) {
+                // Keeps the "no data" card
+            }
+        });
+    }
+
+    // A white card inside the given section, for a list of rows.
+    private LinearLayout whiteBox(LinearLayout parent) {
+        LinearLayout box = new LinearLayout(this);
+        box.setOrientation(LinearLayout.VERTICAL);
+        box.setPadding(dp(16), dp(14), dp(16), dp(14));
+        box.setBackground(round(WHITE, 16));
+        parent.addView(box);
+        return box;
+    }
+
+    // One name and number row in a white card.
+    private LinearLayout numberRow(String label, String value) {
+        LinearLayout row = new LinearLayout(this);
+        row.setOrientation(LinearLayout.HORIZONTAL);
+        row.setPadding(0, dp(8), 0, dp(8));
+        row.addView(text(label, 14, NAVY, false), new LinearLayout.LayoutParams(0, -2, 1));
+        row.addView(text(value, 14, NAVY, true));
+        return row;
     }
 
     private LinearLayout makeRow() {
@@ -123,7 +224,7 @@ public class EngagementAnalytics extends AppCompatActivity {
         return row;
     }
 
-    private void addStat(LinearLayout row, String label,
+    private TextView addStat(LinearLayout row, String label,
                          String value, int accent) {
 
         LinearLayout box = new LinearLayout(this);
@@ -152,6 +253,7 @@ public class EngagementAnalytics extends AppCompatActivity {
                 new LinearLayout.LayoutParams(-1, -2);
         titleParams.topMargin = dp(5);
         box.addView(title, titleParams);
+        return number;
     }
 
     private void addSectionTitle(String title) {
@@ -164,13 +266,13 @@ public class EngagementAnalytics extends AppCompatActivity {
         content.addView(label, params);
     }
 
-    private void addEmptyCard(String title, String description) {
+    private void addEmptyCard(LinearLayout parent, String title, String description) {
         LinearLayout box = new LinearLayout(this);
         box.setOrientation(LinearLayout.VERTICAL);
         box.setGravity(Gravity.CENTER);
         box.setPadding(dp(18), dp(24), dp(18), dp(24));
         box.setBackground(round(WHITE, 16));
-        content.addView(box);
+        parent.addView(box);
 
         TextView heading = text(title, 15, NAVY, true);
         heading.setGravity(Gravity.CENTER);

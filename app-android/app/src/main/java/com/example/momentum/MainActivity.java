@@ -1,7 +1,9 @@
 package com.example.momentum;
 
+import com.example.momentum.activities.BaseActivity;
 import android.app.AlertDialog;
 import android.content.Context;
+import android.content.res.Configuration;
 import android.content.res.ColorStateList;
 import android.graphics.Canvas;
 import android.graphics.Color;
@@ -31,7 +33,6 @@ import android.widget.TextView;
 import android.widget.Toast;
 
 import androidx.activity.OnBackPressedCallback;
-import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.view.WindowCompat;
 import androidx.core.view.WindowInsetsControllerCompat;
 
@@ -56,6 +57,7 @@ import com.example.momentum.activities.StudyTimetableActivity;
 import com.example.momentum.admin.AdminPanel;
 import com.example.momentum.model.Enrolment;
 import com.example.momentum.data.ApiCallback;
+import com.example.momentum.data.AppSettings;
 import com.example.momentum.data.Session;
 import com.example.momentum.model.LeaderboardEntry;
 import com.example.momentum.model.User;
@@ -63,11 +65,19 @@ import com.example.momentum.service.AuthService;
 import com.example.momentum.service.CourseService;
 import com.example.momentum.service.GoalService;
 import com.example.momentum.service.LeaderboardService;
+import com.example.momentum.service.ProfileService;
+import com.example.momentum.activities.LearnTechActivity;
+import com.example.momentum.activities.SettingsActivity;
+import com.example.momentum.model.CheckIn;
+import android.widget.AdapterView;
+import android.widget.ArrayAdapter;
+import android.widget.Spinner;
+import java.util.Arrays;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
-public class MainActivity extends AppCompatActivity {
+public class MainActivity extends BaseActivity {
 
    // colors used throughout the app
     private static final int NAVY = Color.rgb(7, 59, 76);
@@ -94,9 +104,9 @@ public class MainActivity extends AppCompatActivity {
     private BottomNavigationView bottomNavigation;
     private String currentTab = "Home";
     private String currentScreen = "main";
-    private String courseFilter = "In Progress";
+    private String courseFilter = "All";
     private String searchQuery = "";
-    private String selectedPeriod = "Weekly";
+    private String selectedPeriod = "Monthly";
     private String courseTab = "Overview";
     private String selectedModule = "";
     private Course selectedCourse;
@@ -117,6 +127,34 @@ public class MainActivity extends AppCompatActivity {
     private final ArrayList<com.example.momentum.model.Course> catalogue = new ArrayList<>();
     private int loadedUserId = -1;
 
+
+    // Catalogue courses the learner isn't enrolled on, and whether their account is linked.
+    private final ArrayList<Course> otherCourses = new ArrayList<>();
+    private Boolean linked;   // null until /me answers
+    private final ProfileService profileService = new ProfileService();
+
+    // The learning platform, where "Continue Learning" takes the learner.
+    private static final String LMS_URL = "https://eduvos.learntech.co.za/";
+
+    // LearnTech's id for Fast Course, the demo course. It gives a random 1 to 30 points.
+    private static final int FAST_COURSE_ID = 58;
+
+    // Dark mode: the light cards and dark text swap to dark cards and light text.
+    // Done in the colour helpers (rounded and text), so every screen follows.
+    private boolean dark;
+
+    // The text size this screen was drawn with, to notice a change in Settings.
+    private float appliedTextSize;
+    private static final int DARK_CARD = Color.rgb(27, 42, 63);
+    private static final int DARK_SOFT = Color.rgb(38, 56, 82);
+    private static final int DARK_TEXT = Color.rgb(232, 237, 245);
+    private static final int DARK_MUTED = Color.rgb(169, 182, 194);
+
+    // From /me: points from every month, and the longest streak ever.
+    // userXp above is this month's points, from the leaderboard.
+    private int totalXp = 0;
+    private int longestStreak = 0;
+
     private static class Course {
         String title = "", instructor = "", description = "", status = "New";
         String completedOn = "";
@@ -124,6 +162,14 @@ public class MainActivity extends AppCompatActivity {
         float rating;
         ArrayList<String> outcomes = new ArrayList<>();
         ArrayList<String> modules = new ArrayList<>();
+
+
+        // From LearnTech, for the course list and the course page.
+        int courseId;                  // our own id, from the catalogue
+        String xpText = "";            // like "45 XP", or "1-30 XP" for Fast Course
+        Integer expectedMinutes;       // null if LearnTech has no duration for it
+        int timeSpentMinutes;
+        boolean notEnrolled;           // in the catalogue, but the learner isn't on it
     }
 
     private static class Goal {
@@ -132,6 +178,14 @@ public class MainActivity extends AppCompatActivity {
         String course = "", target = "", lastAccessed = "", completedDate = "";
         String status = "On Track";
         boolean completed;
+
+
+        // From the backend, for editing and for showing what the goal is.
+        String goalType = "free_text";
+        Integer targetValue, targetCourseId;
+        String targetDate;            // yyyy-MM-dd, null if there's no deadline
+        boolean missed;               // the target date passed before it was reached
+
         Goal(int id, String title) { this.id = id; this.title = title; }
     }
 
@@ -156,23 +210,43 @@ public class MainActivity extends AppCompatActivity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+
+
+        // Dark mode, from Settings or the phone's own setting
+        dark = (getResources().getConfiguration().uiMode & Configuration.UI_MODE_NIGHT_MASK)
+                == Configuration.UI_MODE_NIGHT_YES;
+
         WindowCompat.setDecorFitsSystemWindows(getWindow(), false);
         getWindow().setStatusBarColor(Color.TRANSPARENT);
         getWindow().setNavigationBarColor(Color.TRANSPARENT);
-        showSplash();
 
-        new android.os.Handler(android.os.Looper.getMainLooper()).postDelayed(() -> {
+
+        // Stops Android drawing its own see-through strip behind the home and back
+        // buttons, so the app's bottom bar colour shows there, light or dark.
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.Q) {
+            getWindow().setNavigationBarContrastEnforced(false);
+        }
+        appliedTextSize = AppSettings.getTextSize(this);
+
+        // The splash only shows when the app opens, not when a screen is redrawn
+        // after a theme change.
+        if (savedInstanceState != null) {
             buildAppShell();
             showStudentTab("Home");
-        }, 1600);
+        } else {
+            showSplash();
+
+            new android.os.Handler(android.os.Looper.getMainLooper()).postDelayed(() -> {
+                buildAppShell();
+                showStudentTab("Home");
+            }, 1600);
+        }
 
         getOnBackPressedDispatcher().addCallback(this, new OnBackPressedCallback(true) {
             @Override public void handleOnBackPressed() {
                 switch (currentScreen) {
                     case "lesson": showCourseDetails(); break;
                     case "courseDetails": showStudentTab("Courses"); break;
-                    case "adminSection": showAdminDashboard(); break;
-                    case "adminDashboard": showStudentTab("Profile"); break;
                     default:
                         if (!"Home".equals(currentTab)) showStudentTab("Home");
                         else finish();
@@ -186,6 +260,14 @@ public class MainActivity extends AppCompatActivity {
     @Override
     protected void onResume() {
         super.onResume();
+
+
+        // The text size changed in Settings: redraw this screen with it.
+        if (appliedTextSize != AppSettings.getTextSize(this)) {
+            recreate();
+            return;
+        }
+
         if (bottomNavigation == null) return;
         if (Session.isLoggedIn() && Session.getUser().id != loadedUserId) {
             loadedUserId = Session.getUser().id;
@@ -217,7 +299,7 @@ public class MainActivity extends AppCompatActivity {
     private void setSystemBarIcons(boolean lightBackground) {
         WindowInsetsControllerCompat c = WindowCompat.getInsetsController(getWindow(), getWindow().getDecorView());
         c.setAppearanceLightStatusBars(lightBackground);
-        c.setAppearanceLightNavigationBars(true);
+        c.setAppearanceLightNavigationBars(!dark);
     }
 
     private void showSplash() {
@@ -248,7 +330,7 @@ public class MainActivity extends AppCompatActivity {
                 ViewGroup.LayoutParams.MATCH_PARENT, 0, 1f));
 
         bottomNavigation = new BottomNavigationView(this);
-        bottomNavigation.setBackgroundColor(WHITE);
+        bottomNavigation.setBackgroundColor(darkBackground(WHITE));
         bottomNavigation.setElevation(dp(8));
         bottomNavigation.setLabelVisibilityMode(NavigationBarView.LABEL_VISIBILITY_LABELED);
         bottomNavigation.setItemHorizontalTranslationEnabled(false);
@@ -271,8 +353,8 @@ public class MainActivity extends AppCompatActivity {
                 case TAB_HOME: showStudentTab("Home"); return true;
                 case TAB_COURSES: showStudentTab("Courses"); return true;
                 case TAB_GOALS: showStudentTab("Goals"); return true;
-                case TAB_LEADERBOARD: showStudentTab("Leaderboard"); return true;
-                case TAB_PROFILE: showStudentTab("Profile"); return true;
+                case TAB_LEADERBOARD: refreshIfLoggedIn(); showStudentTab("Leaderboard"); return true;
+                case TAB_PROFILE: refreshIfLoggedIn(); showStudentTab("Profile"); return true;
                 default: return false;
             }
         });
@@ -315,7 +397,7 @@ public class MainActivity extends AppCompatActivity {
 
     private GradientDrawable rounded(int color, int radius) {
         GradientDrawable d = new GradientDrawable();
-        d.setColor(color);
+        d.setColor(darkBackground(color));
         d.setCornerRadius(dp(radius));
         return d;
     }
@@ -382,7 +464,7 @@ public class MainActivity extends AppCompatActivity {
     private TextView text(String value, int color, float size, boolean bold) {
         TextView t = new TextView(this);
         t.setText(value);
-        t.setTextColor(color);
+        t.setTextColor(darkText(color));
         t.setTextSize(size);
         if (bold) t.setTypeface(null, Typeface.BOLD);
         return t;
@@ -416,6 +498,22 @@ public class MainActivity extends AppCompatActivity {
         lp.topMargin = dp(4);
         lp.bottomMargin = dp(10);
         parent.addView(t, lp);
+    }
+
+    // In dark mode, light card colours become dark ones. Anything else stays as it is.
+    private int darkBackground(int color) {
+        if (!dark) return color;
+        if (color == WHITE || color == PALE) return DARK_CARD;
+        if (color == Color.rgb(226, 231, 241) || color == Color.rgb(232, 236, 255)) return DARK_SOFT;
+        return color;
+    }
+
+    // In dark mode, the dark navy and grey text become light, so they show on dark cards.
+    private int darkText(int color) {
+        if (!dark) return color;
+        if (color == DEEP_NAVY) return DARK_TEXT;
+        if (color == MUTED) return DARK_MUTED;
+        return color;
     }
 
     private TextView pill(String label, int fg, int bg) {
@@ -542,7 +640,7 @@ public class MainActivity extends AppCompatActivity {
         stats.setOrientation(LinearLayout.HORIZONTAL);
         stats.addView(statCard("book", PURPLE, String.valueOf(courses.size()), "ENROLLED", true), statLp(false));
         stats.addView(statCard("target", TEAL, String.valueOf(goalsMet), "GOALS MET", true), statLp(false));
-        stats.addView(statCard("hex", GOLD, String.format(Locale.getDefault(), "%,d", userXp), "XP POINTS", false), statLp(true));
+        stats.addView(statCard("hex", GOLD, String.format(Locale.getDefault(), "%,d", totalXp), "XP POINTS", false), statLp(true));
         p.content.addView(stats, new LinearLayout.LayoutParams(-1, -2));
 
         // The extra screens
@@ -609,8 +707,8 @@ public class MainActivity extends AppCompatActivity {
         EditText search = new EditText(this);
         search.setSingleLine(true);
         search.setTextSize(14);
-        search.setTextColor(DEEP_NAVY);
-        search.setHintTextColor(MUTED);
+        search.setTextColor(darkText(DEEP_NAVY));
+        search.setHintTextColor(darkText(MUTED));
         search.setHint("Search courses, topics, skills...");
         search.setBackgroundColor(Color.TRANSPARENT);
         search.setPadding(dp(12), 0, 0, 0);
@@ -625,7 +723,7 @@ public class MainActivity extends AppCompatActivity {
         chipScroll.setHorizontalScrollBarEnabled(false);
         LinearLayout filters = new LinearLayout(this);
         filters.setOrientation(LinearLayout.HORIZONTAL);
-        for (String option : new String[]{"All", "In Progress", "Completed", "New"}) {
+        for (String option : new String[]{"All", "In Progress", "Completed", "New", "Not Enrolled"}) {
             TextView chip = makeChip(option, courseFilter.equals(option));
             LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(-2, dp(38));
             lp.rightMargin = dp(8);
@@ -657,6 +755,17 @@ public class MainActivity extends AppCompatActivity {
         list.removeAllViews();
         String q = searchQuery.trim().toLowerCase(Locale.ROOT);
         int shown = 0;
+
+
+        // An account that isn't linked to a LearnTech learner has no courses of its own yet.
+        if (Boolean.FALSE.equals(linked)) {
+            LinearLayout note = cardIn(list);
+            addText(note, "Not linked to LearnTech yet", DEEP_NAVY, 16, true);
+            addText(note, "Your account isn't linked to a learner on the learning platform, so your own "
+                    + "courses can't show yet. Use the same email as on the platform, or ask an "
+                    + "administrator to link your account.", MUTED, 14, false);
+        }
+
         for (Course c : courses) {
             if (!"All".equals(courseFilter) && !courseFilter.equals(c.status)) continue;
             if (!q.isEmpty() && !c.title.toLowerCase(Locale.ROOT).contains(q)
@@ -666,6 +775,24 @@ public class MainActivity extends AppCompatActivity {
             list.addView(courseRow(c), lp);
             shown++;
         }
+
+
+        // The rest of the catalogue, under its own heading.
+        if ("All".equals(courseFilter) || "Not Enrolled".equals(courseFilter)) {
+            boolean headingAdded = false;
+            for (Course c : otherCourses) {
+                if (!q.isEmpty() && !c.title.toLowerCase(Locale.ROOT).contains(q)) continue;
+                if (!headingAdded) {
+                    addHeading(list, "Other courses");
+                    headingAdded = true;
+                }
+                LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(-1, -2);
+                lp.bottomMargin = dp(12);
+                list.addView(courseRow(c), lp);
+                shown++;
+            }
+        }
+
         if (shown == 0) {
             LinearLayout empty = cardIn(list);
             boolean none = courses.isEmpty();
@@ -689,14 +816,21 @@ public class MainActivity extends AppCompatActivity {
         LinearLayout info = new LinearLayout(this);
         info.setOrientation(LinearLayout.VERTICAL);
         info.addView(text(c.title, DEEP_NAVY, 15, true));
-        TextView inst = text("INSTRUCTOR: " + c.instructor.toUpperCase(Locale.getDefault()), MUTED, 11, true);
+
+
+        // LearnTech has no instructors, so the course's state goes there instead.
+        String subtitle = !c.instructor.isEmpty() ? "INSTRUCTOR: " + c.instructor.toUpperCase(Locale.getDefault())
+                : c.notEnrolled ? "NOT ENROLLED"
+                : "New".equals(c.status) ? "NOT STARTED"
+                : c.status.toUpperCase(Locale.getDefault());
+        TextView inst = text(subtitle, MUTED, 11, true);
         inst.setPadding(0, dp(4), 0, 0);
         info.addView(inst);
         LinearLayout.LayoutParams infoLp = new LinearLayout.LayoutParams(0, -2, 1f);
         infoLp.leftMargin = dp(12);
         row.addView(info, infoLp);
 
-        TextView xp = pill(c.xp + " XP", TEAL_DARK, TEAL_BG);
+        TextView xp = pill(c.xpText.isEmpty() ? c.xp + " XP" : c.xpText, TEAL_DARK, TEAL_BG);
         LinearLayout.LayoutParams xpLp = new LinearLayout.LayoutParams(-2, -2);
         xpLp.leftMargin = dp(8);
         row.addView(xp, xpLp);
@@ -729,12 +863,18 @@ public class MainActivity extends AppCompatActivity {
             top.setOrientation(LinearLayout.HORIZONTAL);
             top.setPadding(0, 0, 0, dp(6));
             top.addView(text(g.title, DEEP_NAVY, 16, true), new LinearLayout.LayoutParams(0, -2, 1f));
-            boolean behind = "Behind".equals(g.status);
+            boolean behind = "Behind".equals(g.status) || "Missed".equals(g.status);
             LinearLayout.LayoutParams pillLp = new LinearLayout.LayoutParams(-2, -2);
             pillLp.leftMargin = dp(8);
             top.addView(pill(g.status, behind ? ORANGE : TEAL_DARK, behind ? ORANGE_BG : TEAL_BG), pillLp);
             c.addView(top, new LinearLayout.LayoutParams(-1, -2));
             if (!g.course.isEmpty()) addText(c, "Course: " + g.course, MUTED, 13, false);
+
+
+            // What the goal is, for the types the app checks by itself.
+            String what = goalSummary(g);
+            if (!what.isEmpty()) addText(c, what, MUTED, 13, false);
+
             if (!g.target.isEmpty()) addText(c, "Target: " + g.target, DEEP_NAVY, 12, false);
             if (!g.lastAccessed.isEmpty()) addText(c, "Last accessed: " + g.lastAccessed, DEEP_NAVY, 12, false);
             c.setOnClickListener(v -> showGoalOptions(g));
@@ -799,7 +939,7 @@ public class MainActivity extends AppCompatActivity {
         fabLp.rightMargin = dp(20);
         fabLp.bottomMargin = dp(20);
         p.root.addView(fab, fabLp);
-        fab.setOnClickListener(v -> showAddGoalDialog());
+        fab.setOnClickListener(v -> showGoalForm(null));
 
         showPage(p.root, false);
     }
@@ -811,55 +951,174 @@ public class MainActivity extends AppCompatActivity {
         return e;
     }
 
-    private void showAddGoalDialog() {
+
+    // The goal types a learner can pick, and how they're shown in the form.
+    // Every type except a personal goal is checked and completed by the app itself.
+    private static final String[] GOAL_TYPES = {"free_text", "complete_specific_course",
+            "complete_n_courses", "spend_minutes", "active_days"};
+    private static final String[] GOAL_TYPE_NAMES = {"Personal goal (you tick it off)",
+            "Finish a specific course", "Finish a number of courses",
+            "Spend minutes learning", "Be active a number of days in a row"};
+
+    // The form for adding a goal, or for editing one when a goal is passed in.
+    private void showGoalForm(Goal existing) {
         LinearLayout form = new LinearLayout(this);
         form.setOrientation(LinearLayout.VERTICAL);
         form.setPadding(dp(24), dp(8), dp(24), 0);
         EditText title = field("Goal title");
-        EditText course = field("Course (optional)");
+        Spinner type = new Spinner(this);
+        type.setAdapter(new ArrayAdapter<>(this, android.R.layout.simple_spinner_dropdown_item, GOAL_TYPE_NAMES));
+        EditText course = field("Course name");
+        EditText number = field("Target number");
+        number.setInputType(InputType.TYPE_CLASS_NUMBER);
         EditText target = field("Target date, e.g. Dec 15 (optional)");
         form.addView(title);
+        form.addView(type);
         form.addView(course);
+        form.addView(number);
         form.addView(target);
 
-        new AlertDialog.Builder(this)
-                .setTitle("New learning goal")
+        // Editing: fill in what the goal already has
+        if (existing != null) {
+            title.setText(existing.title);
+            type.setSelection(Math.max(0, Arrays.asList(GOAL_TYPES).indexOf(existing.goalType)));
+            course.setText(existing.course);
+            if (existing.targetValue != null) number.setText(String.valueOf(existing.targetValue));
+            target.setText(existing.target);
+        }
+
+        // Only show the course or number field the chosen type needs
+        type.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
+            @Override public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
+                String goalType = GOAL_TYPES[position];
+                boolean needsNumber = !"free_text".equals(goalType) && !"complete_specific_course".equals(goalType);
+                course.setVisibility("complete_specific_course".equals(goalType) ? View.VISIBLE : View.GONE);
+                number.setVisibility(needsNumber ? View.VISIBLE : View.GONE);
+                number.setHint("spend_minutes".equals(goalType) ? "Minutes"
+                        : "complete_n_courses".equals(goalType) ? "Number of courses" : "Number of days");
+            }
+            @Override public void onNothingSelected(AdapterView<?> parent) { }
+        });
+
+        AlertDialog dialog = new AlertDialog.Builder(this)
+                .setTitle(existing == null ? "New learning goal" : "Edit goal")
                 .setView(form)
-                .setPositiveButton("Add", (d, w) -> {
-                    String t = title.getText().toString().trim();
-                    if (t.isEmpty()) {
-                        Toast.makeText(this, "Enter a goal title", Toast.LENGTH_SHORT).show();
-                        return;
-                    }
-                    if (!Session.isLoggedIn()) {
-                        Toast.makeText(this, "Log in to add goals", Toast.LENGTH_SHORT).show();
-                        return;
-                    }
+                .setPositiveButton(existing == null ? "Add" : "Save", null)
+                .setNegativeButton("Cancel", null)
+                .create();
 
-                    // The course is optional, but if one is typed it has to be a real course
-                    String courseName = course.getText().toString().trim();
-                    Integer courseId = null;
-                    if (!courseName.isEmpty()) {
-                        courseId = findCourseId(courseName);
-                        if (courseId == null) {
-                            Toast.makeText(this, "No course called " + courseName, Toast.LENGTH_SHORT).show();
-                            return;
+        // The button is set up after the dialog shows, so a mistake keeps the form open
+        dialog.setOnShowListener(shown -> dialog.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener(v -> {
+            String t = title.getText().toString().trim();
+            String goalType = GOAL_TYPES[type.getSelectedItemPosition()];
+            if (t.isEmpty()) {
+                Toast.makeText(this, "Enter a goal title", Toast.LENGTH_SHORT).show();
+                return;
+            }
+            if (!Session.isLoggedIn()) {
+                Toast.makeText(this, "Log in to add goals", Toast.LENGTH_SHORT).show();
+                return;
+            }
+
+            // A specific course has to be a real course in the catalogue
+            Integer courseId = null;
+            if ("complete_specific_course".equals(goalType)) {
+                String courseName = course.getText().toString().trim();
+                courseId = findCourseId(courseName);
+                if (courseId == null) {
+                    Toast.makeText(this, courseName.isEmpty() ? "Enter the course name"
+                            : "No course called " + courseName, Toast.LENGTH_SHORT).show();
+                    return;
+                }
+            }
+
+            // Courses, minutes and days need a number more than 0
+            Integer targetValue = null;
+            if (number.getVisibility() == View.VISIBLE) {
+                try {
+                    targetValue = Integer.parseInt(number.getText().toString().trim());
+                } catch (NumberFormatException e) {
+                    targetValue = 0;
+                }
+                if (targetValue <= 0) {
+                    Toast.makeText(this, "Enter a target number more than 0", Toast.LENGTH_SHORT).show();
+                    return;
+                }
+            }
+
+            // The target date is optional, e.g. "Dec 15"
+            String targetText = target.getText().toString().trim();
+            String targetDate = null;
+            if (!targetText.isEmpty()) {
+                targetDate = toDatabaseDate(targetText);
+                if (targetDate == null) {
+                    Toast.makeText(this, "Enter the date like Dec 15", Toast.LENGTH_SHORT).show();
+                    return;
+                }
+            }
+
+            goalService.saveGoal(existing == null ? null : existing.id, t, goalType, targetValue,
+                    courseId, targetDate, new ApiCallback<Void>() {
+                        @Override public void onSuccess(Void result) {
+                            dialog.dismiss();
+                            // A missed goal with a new date gets another chance
+                            if (existing != null && existing.missed) {
+                                goalService.reopenGoal(existing.id, new ApiCallback<Void>() {
+                                    @Override public void onSuccess(Void r) { loadGoals(); }
+                                    @Override public void onError(String error) { loadGoals(); }
+                                });
+                            } else {
+                                loadGoals();
+                            }
                         }
-                    }
-
-                    // The target date is optional, e.g. "Dec 15"
-                    String targetText = target.getText().toString().trim();
-                    String targetDate = null;
-                    if (!targetText.isEmpty()) {
-                        targetDate = toDatabaseDate(targetText);
-                        if (targetDate == null) {
-                            Toast.makeText(this, "Enter the date like Dec 15", Toast.LENGTH_SHORT).show();
-                            return;
+                        @Override public void onError(String error) {
+                            Toast.makeText(MainActivity.this, error, Toast.LENGTH_SHORT).show();
                         }
-                    }
+                    });
+        }));
+        dialog.show();
+    }
 
-                    goalService.createGoal(t, courseId, targetDate, new ApiCallback<Void>() {
-                        @Override public void onSuccess(Void result) { loadGoals(); }
+    // What the goal is, for the types the app checks by itself. Empty for the others.
+    private String goalSummary(Goal g) {
+        if (g.targetValue == null || g.goalType == null) return "";
+        switch (g.goalType) {
+            case "complete_n_courses": return "Finish " + g.targetValue + (g.targetValue == 1 ? " course" : " courses");
+            case "spend_minutes": return "Spend " + g.targetValue + " minutes learning";
+            case "active_days": return "Be active " + g.targetValue + " days in a row";
+            default: return "";
+        }
+    }
+
+    // Logs progress on a goal. A check-in on a new day also keeps the streak going,
+    // and the goal may complete straight away if it's now reached.
+    private void showCheckInDialog(Goal g) {
+        LinearLayout form = new LinearLayout(this);
+        form.setOrientation(LinearLayout.VERTICAL);
+        form.setPadding(dp(24), dp(8), dp(24), 0);
+        EditText note = field("What did you do? (optional)");
+        EditText amount = field("spend_minutes".equals(g.goalType) ? "Minutes studied (optional)" : "Amount (optional)");
+        amount.setInputType(InputType.TYPE_CLASS_NUMBER);
+        form.addView(note);
+        form.addView(amount);
+
+        new AlertDialog.Builder(this)
+                .setTitle("Check in: " + g.title)
+                .setView(form)
+                .setPositiveButton("Log check-in", (d, w) -> {
+                    String noteText = note.getText().toString().trim();
+                    Integer value = null;
+                    try {
+                        value = Integer.parseInt(amount.getText().toString().trim());
+                    } catch (NumberFormatException e) {
+                        // left empty, that's fine
+                    }
+                    goalService.logCheckIn(g.id, noteText.isEmpty() ? null : noteText, value, new ApiCallback<Void>() {
+                        @Override public void onSuccess(Void result) {
+                            Toast.makeText(MainActivity.this, "Check-in logged", Toast.LENGTH_SHORT).show();
+                            loadGoals();
+                            loadMe();
+                        }
                         @Override public void onError(String error) {
                             Toast.makeText(MainActivity.this, error, Toast.LENGTH_SHORT).show();
                         }
@@ -869,13 +1128,59 @@ public class MainActivity extends AppCompatActivity {
                 .show();
     }
 
+    // Shows every check-in logged on a goal, newest first.
+    private void showCheckIns(Goal g) {
+        goalService.getCheckIns(g.id, new ApiCallback<List<CheckIn>>() {
+            @Override public void onSuccess(List<CheckIn> result) {
+                if (result.isEmpty()) {
+                    message("Check-ins", "No check-ins on this goal yet.");
+                    return;
+                }
+                String[] rows = new String[result.size()];
+                for (int i = 0; i < result.size(); i++) {
+                    CheckIn checkIn = result.get(i);
+                    rows[i] = toDisplayDate(checkIn.loggedAt)
+                            + (checkIn.note != null ? "  -  " + checkIn.note : "")
+                            + (checkIn.valueLogged != null ? "  (" + checkIn.valueLogged + ")" : "");
+                }
+                new AlertDialog.Builder(MainActivity.this)
+                        .setTitle("Check-ins: " + g.title)
+                        .setItems(rows, null)
+                        .setPositiveButton("OK", null)
+                        .show();
+            }
+            @Override public void onError(String error) {
+                Toast.makeText(MainActivity.this, error, Toast.LENGTH_SHORT).show();
+            }
+        });
+    }
+
     private void showGoalOptions(Goal g) {
-        final String[] items = g.completed
-                ? new String[]{"Mark as active", "Delete goal"}
-                : new String[]{"Mark as completed",
-                "Behind".equals(g.status) ? "Mark as on track" : "Mark as behind", "Delete goal"};
+
+
+        // The options depend on the goal. Only personal goals can be ticked off by hand,
+        // because the app completes the other types itself. Missed goals can be reopened.
+        ArrayList<String> options = new ArrayList<>();
+        if (!g.completed && !g.missed) options.add("Log check-in");
+        options.add("View check-ins");
+        options.add("Edit goal");
+        if (g.completed || g.missed) {
+            options.add("Mark as active");
+        } else {
+            if ("free_text".equals(g.goalType)) options.add("Mark as completed");
+            options.add("Behind".equals(g.status) ? "Mark as on track" : "Mark as behind");
+        }
+        options.add("Delete goal");
+        final String[] items = options.toArray(new String[0]);
+
         new AlertDialog.Builder(this).setTitle(g.title).setItems(items, (d, which) -> {
             String choice = items[which];
+
+
+            if ("Log check-in".equals(choice)) { showCheckInDialog(g); return; }
+            if ("View check-ins".equals(choice)) { showCheckIns(g); return; }
+            if ("Edit goal".equals(choice)) { showGoalForm(g); return; }
+
             ApiCallback<Void> reload = new ApiCallback<Void>() {
                 @Override public void onSuccess(Void result) { loadGoals(); }
                 @Override public void onError(String error) {
@@ -913,7 +1218,7 @@ public class MainActivity extends AppCompatActivity {
         LinearLayout meInfo = new LinearLayout(this);
         meInfo.setOrientation(LinearLayout.VERTICAL);
         meInfo.addView(text(userName.isEmpty() ? "Your ranking" : userName, DEEP_NAVY, 16, true));
-        meInfo.addView(text(String.format(Locale.getDefault(), "%,d XP", userXp), MUTED, 13, false));
+        meInfo.addView(text(String.format(Locale.getDefault(), "%,d XP", "All Time".equals(selectedPeriod) ? totalXp : userXp), MUTED, 13, false));
         LinearLayout.LayoutParams meInfoLp = new LinearLayout.LayoutParams(0, -2, 1f);
         meInfoLp.leftMargin = dp(12);
         me.addView(meInfo, meInfoLp);
@@ -938,13 +1243,13 @@ public class MainActivity extends AppCompatActivity {
         seg.setOrientation(LinearLayout.HORIZONTAL);
         seg.setPadding(dp(4), dp(4), dp(4), dp(4));
         seg.setBackground(rounded(Color.rgb(226, 231, 241), 26));
-        for (String option : new String[]{"Weekly", "Monthly", "All Time"}) {
+        for (String option : new String[]{"Monthly", "All Time"}) {
             boolean sel = selectedPeriod.equals(option);
             TextView t = text(option, sel ? DEEP_NAVY : MUTED, 14, true);
             t.setGravity(Gravity.CENTER);
             if (sel) t.setBackground(rounded(WHITE, 22));
             seg.addView(t, new LinearLayout.LayoutParams(0, dp(40), 1f));
-            t.setOnClickListener(v -> { selectedPeriod = option; showLeaderboard(); });
+            t.setOnClickListener(v -> { selectedPeriod = option; loadLeaderboard(); showLeaderboard(); });
         }
         LinearLayout.LayoutParams segLp = new LinearLayout.LayoutParams(-1, -2);
         segLp.bottomMargin = dp(14);
@@ -953,7 +1258,7 @@ public class MainActivity extends AppCompatActivity {
         if (leaderboard.isEmpty()) {
             LinearLayout empty = card(p);
             addText(empty, "No rankings available", DEEP_NAVY, 17, true);
-            addText(empty, selectedPeriod + " rankings will appear here when leaderboard data is connected.", MUTED, 14, false);
+            addText(empty, "Monthly".equals(selectedPeriod) ? "Nobody has earned points this month yet." : "Nobody has earned points yet.", MUTED, 14, false);
         } else {
             for (int i = 0; i < leaderboard.size(); i++) {
                 LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(-1, -2);
@@ -1004,17 +1309,51 @@ public class MainActivity extends AppCompatActivity {
             addText(c, "Signed in as " + user.fullName, MUTED, 14, false);
             addText(c, user.email, MUTED, 14, false);
             addButton(c, "Log out", true, v -> logout());
+
+
+            // Name, password, dark mode and text size
+            addButton(c, "Settings", false, v -> openScreen(SettingsActivity.class));
+
+            // The learner's points and streak. The leaderboard only counts this month,
+            // so the all-time total is shown here.
+            LinearLayout numbers = card(p);
+            addText(numbers, "Your progress", DEEP_NAVY, 16, true);
+            addProfileRow(numbers, "All-time points", String.format(Locale.getDefault(), "%,d XP", totalXp));
+            addProfileRow(numbers, "This month", String.format(Locale.getDefault(), "%,d XP", userXp));
+            addProfileRow(numbers, "Current streak", streakDays + (streakDays == 1 ? " day" : " days"));
+            addProfileRow(numbers, "Longest streak", longestStreak + (longestStreak == 1 ? " day" : " days"));
+            if (Boolean.FALSE.equals(linked)) {
+                addText(numbers, "Not linked to LearnTech yet, so course points can't be earned.", MUTED, 12, false);
+            }
         } else {
             addText(c, "Sign in or create an account to access your learning profile.", MUTED, 14, false);
             addButton(c, "Log in", false, v -> startActivity(new Intent(this, LoginActivity.class)));
             addButton(c, "Create account", true, v -> startActivity(new Intent(this, SignupActivity.class)));
         }
-        LinearLayout admin = card(p);
-        addText(admin, "Administration", DEEP_NAVY, 16, true);
-        addText(admin, "Development preview only. Admin access must be secured by the backend before release.", MUTED, 12, false);
-        addButton(admin, "Open admin panel", true, v ->
-                        startActivity(new Intent(MainActivity.this, AdminPanel.class)));
+
+
+
+        // Only administrators see the admin panel. The backend checks the role as well.
+        if (Session.isLoggedIn() && Session.getUser().isAdmin()) {
+            LinearLayout admin = card(p);
+            addText(admin, "Administration", DEEP_NAVY, 16, true);
+            addText(admin, "Manage users, courses, badges and the LearnTech connection.", MUTED, 12, false);
+            addButton(admin, "Open admin panel", true, v ->
+                            startActivity(new Intent(MainActivity.this, AdminPanel.class)));
+        }
+
         showPage(p.root, false);
+    }
+
+
+    // One label and number row on the profile.
+    private void addProfileRow(LinearLayout parent, String label, String value) {
+        LinearLayout row = new LinearLayout(this);
+        row.setOrientation(LinearLayout.HORIZONTAL);
+        row.setPadding(0, dp(8), 0, dp(8));
+        row.addView(text(label, MUTED, 14, false), new LinearLayout.LayoutParams(0, -2, 1f));
+        row.addView(text(value, DEEP_NAVY, 14, true));
+        parent.addView(row, new LinearLayout.LayoutParams(-1, -2));
     }
 
     // Login, register and logout
@@ -1024,7 +1363,12 @@ public class MainActivity extends AppCompatActivity {
         loadedUserId = -1;
         userName = "";
         userXp = 0;
+        totalXp = 0;
+        streakDays = 0;
+        longestStreak = 0;
         courses.clear();
+        otherCourses.clear();
+        linked = null;
         goals.clear();
         leaderboard.clear();
         catalogue.clear();
@@ -1047,6 +1391,36 @@ public class MainActivity extends AppCompatActivity {
             }
         });
         loadLeaderboard();
+        loadMe();
+    }
+
+    // Gets the latest rankings, points and streak each time the Leaderboard or
+    // Profile tab is opened, so they're never out of date.
+    private void refreshIfLoggedIn() {
+        if (Session.isLoggedIn()) {
+            loadLeaderboard();
+            loadMe();
+        }
+    }
+
+    // The learner's own numbers: linked or not, all-time points and the streak
+    // from their check-ins, which the backend keeps.
+    private void loadMe() {
+        profileService.getMe(new ApiCallback<User>() {
+            @Override public void onSuccess(User me) {
+                linked = me.isLinked();
+                userName = me.fullName;
+                totalXp = me.totalPoints != null ? me.totalPoints : 0;
+                streakDays = me.currentStreak != null ? me.currentStreak : 0;
+                longestStreak = me.longestStreak != null ? me.longestStreak : 0;
+                if ("main".equals(currentScreen)) {
+                    showStudentTab(currentTab);
+                }
+            }
+            @Override public void onError(String error) {
+                // Leaves the linked note out
+            }
+        });
     }
 
     private void loadCourses() {
@@ -1055,24 +1429,71 @@ public class MainActivity extends AppCompatActivity {
                 courses.clear();
                 for (Enrolment enrolment : result) {
                     com.example.momentum.model.Course info = catalogueCourse(enrolment.courseId);
-                    Course c = new Course();
-                    c.title = info != null ? info.name : "Course";
+                    Course c = courseFrom(info);
                     c.status = "completed".equals(enrolment.state) ? "Completed"
                             : "in_progress".equals(enrolment.state) ? "In Progress" : "New";
-                    // Points value set by the admin, otherwise the course's minutes
-                    if (info != null && info.pointsValue != null) c.xp = info.pointsValue;
-                    else if (info != null && info.expectedMinutes != null) c.xp = info.expectedMinutes;
+                    c.timeSpentMinutes = enrolment.timeSpentMinutes;
                     c.completedOn = enrolment.completedOn == null ? "" : enrolment.completedOn;
+
+                    // A completed course shows what it really earned. 0 means it didn't
+                    // pass the time check (at least 70% of the expected time spent in it).
+                    if ("Completed".equals(c.status)) {
+                        c.xp = enrolment.pointsEarned != null ? enrolment.pointsEarned : 0;
+                        c.xpText = c.xp + " XP";
+                    }
                     courses.add(c);
                 }
+                fillOtherCourses();
                 if ("main".equals(currentScreen) && ("Home".equals(currentTab) || "Courses".equals(currentTab))) {
                     showStudentTab(currentTab);
                 }
             }
             @Override public void onError(String error) {
-                // The Courses tab shows its empty message
+                // The Courses tab still shows the rest of the catalogue
+                fillOtherCourses();
             }
         });
+    }
+
+    // Every catalogue course the learner isn't enrolled on.
+    private void fillOtherCourses() {
+        otherCourses.clear();
+        for (com.example.momentum.model.Course info : catalogue) {
+            boolean enrolled = false;
+            for (Course c : courses) {
+                if (c.courseId == info.courseId) {
+                    enrolled = true;
+                    break;
+                }
+            }
+            if (!enrolled) {
+                Course c = courseFrom(info);
+                c.notEnrolled = true;
+                otherCourses.add(c);
+            }
+        }
+    }
+
+    // A course for the screens, from the catalogue. The points shown are what it's
+    // worth when completed: the admin's value, otherwise its expected minutes.
+    // Fast Course is the demo course, worth a random 1 to 30.
+    private Course courseFrom(com.example.momentum.model.Course info) {
+        Course c = new Course();
+        if (info == null) {
+            c.title = "Course";
+            return c;
+        }
+        c.courseId = info.courseId;
+        c.title = info.name;
+        c.expectedMinutes = info.expectedMinutes;
+        if (info.platformCourseId == FAST_COURSE_ID) {
+            c.xpText = "1-30 XP";
+        } else {
+            c.xp = info.pointsValue != null ? info.pointsValue
+                    : info.expectedMinutes != null ? info.expectedMinutes : 10;
+            c.xpText = c.xp + " XP";
+        }
+        return c;
     }
 
     private com.example.momentum.model.Course catalogueCourse(int courseId) {
@@ -1094,6 +1515,12 @@ public class MainActivity extends AppCompatActivity {
                     g.lastAccessed = toDisplayDate(saved.createdAt);
                     g.completed = "completed".equals(saved.status);
                     g.completedDate = toDisplayDate(saved.completedAt);
+                    g.goalType = saved.goalType;
+                    g.targetValue = saved.targetValue;
+                    g.targetCourseId = saved.targetCourseId;
+                    g.targetDate = saved.targetDate;
+                    g.missed = "failed".equals(saved.status);
+                    if (g.missed) g.status = "Missed";
                     goals.add(g);
                 }
                 if ("Goals".equals(currentTab) && "main".equals(currentScreen)) showGoals();
@@ -1105,16 +1532,23 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void loadLeaderboard() {
-        leaderboardService.getLeaderboard(new ApiCallback<List<LeaderboardEntry>>() {
+        boolean allTime = "All Time".equals(selectedPeriod);
+        leaderboardService.getLeaderboard(allTime, new ApiCallback<List<LeaderboardEntry>>() {
             @Override public void onSuccess(List<LeaderboardEntry> result) {
+                // The learner switched period before this answer arrived: it's out of date
+                if (allTime != "All Time".equals(selectedPeriod)) return;
                 leaderboard.clear();
                 for (LeaderboardEntry entry : result) {
                     LeaderEntry e = new LeaderEntry();
                     e.name = entry.name;
                     e.xp = entry.points;
                     e.you = Session.getUser() != null && entry.userId == Session.getUser().id;
-                    if (e.you) userXp = entry.points;
+                    if (e.you && !allTime) userXp = entry.points;
                     leaderboard.add(e);
+                }
+                // The rankings arrive after the screen is drawn, so draw it again
+                if ("main".equals(currentScreen) && "Leaderboard".equals(currentTab)) {
+                    showLeaderboard();
                 }
             }
             @Override public void onError(String error) {
@@ -1146,6 +1580,20 @@ public class MainActivity extends AppCompatActivity {
             typed.setLenient(false);
             String year = new SimpleDateFormat("yyyy", Locale.ENGLISH).format(new Date());
             Date date = typed.parse(text + " " + year);
+
+            // A date that has already passed this year means next year, so "Jan 5"
+            // typed in December doesn't make a goal that's already missed.
+            java.util.Calendar startOfToday = java.util.Calendar.getInstance();
+            startOfToday.set(java.util.Calendar.HOUR_OF_DAY, 0);
+            startOfToday.set(java.util.Calendar.MINUTE, 0);
+            startOfToday.set(java.util.Calendar.SECOND, 0);
+            startOfToday.set(java.util.Calendar.MILLISECOND, 0);
+            if (date.before(startOfToday.getTime())) {
+                java.util.Calendar nextYear = java.util.Calendar.getInstance();
+                nextYear.setTime(date);
+                nextYear.add(java.util.Calendar.YEAR, 1);
+                date = nextYear.getTime();
+            }
             return new SimpleDateFormat("yyyy-MM-dd", Locale.ENGLISH).format(date);
         } catch (Exception e) {
             return null;
@@ -1211,7 +1659,7 @@ public class MainActivity extends AppCompatActivity {
         // Tabs
         LinearLayout tabs = new LinearLayout(this);
         tabs.setOrientation(LinearLayout.HORIZONTAL);
-        for (String name : new String[]{"Overview", "Modules", "Discussion"}) {
+        for (String name : new String[]{"Overview"}) {
             boolean sel = courseTab.equals(name);
             LinearLayout tab = new LinearLayout(this);
             tab.setOrientation(LinearLayout.VERTICAL);
@@ -1253,6 +1701,11 @@ public class MainActivity extends AppCompatActivity {
         } else if ("Discussion".equals(courseTab)) {
             addHeading(p.content, "Discussion");
             addText(p.content, "Course discussion will appear here when it is connected.", softWhite, 14, false);
+        } else if (c != null && c.description.isEmpty() && c.outcomes.isEmpty()) {
+
+
+            // LearnTech sends no description or learning outcomes, so show what it does send.
+            addCourseDetails(p.content, c);
         } else {
             addHeading(p.content, "Course Description");
             addText(p.content, c == null || c.description.isEmpty()
@@ -1296,6 +1749,12 @@ public class MainActivity extends AppCompatActivity {
                 showLesson(selectedCourse.modules.get(0));
             } else {
                 recordStudyStreak();
+
+
+                // The course itself is on the learning platform, so open it inside the app.
+                Intent learnTech = new Intent(MainActivity.this, LearnTechActivity.class);
+                learnTech.putExtra(LearnTechActivity.EXTRA_URL, LMS_URL);
+                startActivity(learnTech);
             }
         });
 
@@ -1310,6 +1769,41 @@ public class MainActivity extends AppCompatActivity {
         }
 
         showPage(p.root, false);
+    }
+
+
+    // The course's details from LearnTech, on the course page.
+    private void addCourseDetails(LinearLayout parent, Course c) {
+        addHeading(parent, "Course Details");
+
+        String state = c.notEnrolled ? "Not enrolled"
+                : "New".equals(c.status) ? "Not started"
+                : c.status;
+        addDetailRow(parent, "Status", state);
+        addDetailRow(parent, "Expected time",
+                c.expectedMinutes == null ? "Not set" : c.expectedMinutes + " minutes");
+        if (!c.notEnrolled) {
+            addDetailRow(parent, "Time spent", c.timeSpentMinutes + " minutes");
+        }
+        addDetailRow(parent, "Completed".equals(c.status) ? "Points earned" : "Points", c.xpText);
+        if (!c.completedOn.isEmpty()) {
+            addDetailRow(parent, "Completed on", toDisplayDate(c.completedOn));
+        }
+    }
+
+    // One label and value row on the course page.
+    private void addDetailRow(LinearLayout parent, String label, String value) {
+        LinearLayout row = new LinearLayout(this);
+        row.setOrientation(LinearLayout.HORIZONTAL);
+        row.setGravity(Gravity.CENTER_VERTICAL);
+        row.setPadding(dp(16), dp(14), dp(16), dp(14));
+        row.setBackground(rounded(Color.argb(45, 255, 255, 255), 14));
+        row.addView(text(label, Color.argb(225, 255, 255, 255), 14, false),
+                new LinearLayout.LayoutParams(0, -2, 1f));
+        row.addView(text(value, WHITE, 14, true));
+        LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(-1, -2);
+        lp.bottomMargin = dp(10);
+        parent.addView(row, lp);
     }
 
     // Records today as a study day for the streak and the Momentum Map.
@@ -1365,30 +1859,6 @@ public class MainActivity extends AppCompatActivity {
         addText(resources, "No resources available yet.", MUTED, 13, false);
         addButton(p.content, "Previous lesson", true, v -> message("Previous lesson", "Lesson navigation will be connected to course data."));
         addButton(p.content, "Next lesson", false, v -> message("Next lesson", "Lesson navigation will be connected to course data."));
-        showPage(p.root, true);
-    }
-
-
-    // ADMIN Placeholder (waiting for backend)
-    private void showAdminDashboard() {
-        currentScreen = "adminDashboard";
-        Page p = createPage("Admin Dashboard", "Manage the LearnTech platform", false);
-        addBack(p.content, "Back to Profile", v -> showStudentTab("Profile"));
-        LinearLayout c = card(p);
-        addText(c, "Welcome, Administrator", DEEP_NAVY, 19, true);
-        addText(c, "Live information will appear when the backend API is connected.", MUTED, 13, false);
-        addButton(c, "System Activity", false, v -> showAdminSection("System Activity"));
-        addButton(c, "Engagement Analytics", true, v -> showAdminSection("Engagement Analytics"));
-        showPage(p.root, true);
-    }
-
-    private void showAdminSection(String title) {
-        currentScreen = "adminSection";
-        Page p = createPage(title, null, false);
-        addBack(p.content, "Back to Admin Dashboard", v -> showAdminDashboard());
-        LinearLayout c = card(p);
-        addText(c, title, DEEP_NAVY, 18, true);
-        addText(c, "Information will appear here when the backend API is connected.", MUTED, 13, false);
         showPage(p.root, true);
     }
 

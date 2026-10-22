@@ -14,7 +14,6 @@ import android.widget.Spinner;
 import android.widget.TextView;
 import android.widget.Toast;
 
-import androidx.appcompat.app.AppCompatActivity;
 
 import com.example.momentum.R;
 import com.example.momentum.data.ApiCallback;
@@ -31,7 +30,7 @@ import java.util.Locale;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-public class StudyTimetableActivity extends AppCompatActivity {
+public class StudyTimetableActivity extends BaseActivity {
 
     private Spinner spinnerDay;
     private EditText editStudyTime;

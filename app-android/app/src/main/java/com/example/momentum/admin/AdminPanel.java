@@ -1,5 +1,6 @@
 package com.example.momentum.admin;
 
+import com.example.momentum.activities.BaseActivity;
 import android.content.Intent;
 import android.graphics.Canvas;
 import android.graphics.Color;
@@ -15,7 +16,6 @@ import android.widget.ScrollView;
 import android.widget.TextView;
 import android.widget.Toast;
 
-import androidx.appcompat.app.AppCompatActivity;
 
 import com.example.momentum.data.ApiCallback;
 import com.example.momentum.data.Session;
@@ -28,7 +28,7 @@ import java.util.Date;
 import java.util.List;
 import java.util.Locale;
 
-public class AdminPanel extends AppCompatActivity {
+public class AdminPanel extends BaseActivity {
 
     private final int NAVY = Color.rgb(7, 29, 53);
     private final int ORANGE = Color.rgb(228, 108, 40);
@@ -51,6 +51,15 @@ public class AdminPanel extends AppCompatActivity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+
+
+        // Only administrators get in. The backend refuses admin data to anyone else too.
+        if (!Session.isLoggedIn() || !Session.getUser().isAdmin()) {
+            Toast.makeText(this, "Administrators only", Toast.LENGTH_SHORT).show();
+            finish();
+            return;
+        }
+
         showDashboard();
     }
 
@@ -169,7 +178,7 @@ public class AdminPanel extends AppCompatActivity {
 
         addAction(actions,
                 "Course management",
-                "Create and manage courses",
+                "Points and expected time per course",
                 TEAL,
                 () -> startActivity(
                         new Intent(
@@ -178,19 +187,27 @@ public class AdminPanel extends AppCompatActivity {
                         )
                 ));
 
-        //Module management
-        addAction(actions,
-                "Module management",
-                "Manage courses, modules and lessons",
-                TEAL,
-                () -> startActivity(
-                        new Intent(
-                                AdminPanel.this,
-                                ModuleManagement.class
-                        )
-                ));
 
-        // system activity screen is created
+
+        // Badges, the LearnTech connection and data export
+        addAction(actions,
+                "Badge management",
+                "Badges, their rules and points",
+                PURPLE,
+                () -> startActivity(new Intent(AdminPanel.this, BadgeManagement.class)));
+
+        addAction(actions,
+                "LearnTech connection",
+                "Platform address, API key and test connection",
+                TEAL,
+                () -> startActivity(new Intent(AdminPanel.this, LearnTechSettings.class)));
+
+        addAction(actions,
+                "Export data",
+                "Save tables as CSV for backup or reporting",
+                GOLD,
+                () -> startActivity(new Intent(AdminPanel.this, DataExport.class)));
+
         addAction(actions,
                 "System activity",
                 "View system events",
@@ -198,7 +215,6 @@ public class AdminPanel extends AppCompatActivity {
                 () -> startActivity(
                         new Intent(AdminPanel.this, SystemActivity.class)
                 ));
-        // Placeholder until the analytics screen is created
         addAction(actions,
                 "Engagement analytics",
                 "Explore engagement data",
@@ -210,12 +226,6 @@ public class AdminPanel extends AppCompatActivity {
                         )
                 ));
 
-        addAction(actions,
-                "Announcements",
-                "Send updates to learners",
-                ORANGE,
-                () -> openSection("Announcements"));
-
         //
         addSectionTitle("Recent Activity");
 
@@ -223,8 +233,7 @@ public class AdminPanel extends AppCompatActivity {
         content.addView(activityCard);
 
         TextView empty = text(
-                "No activity data available yet.\n"
-                        + "Activity will appear here when the backend is connected.",
+                "No activity yet.",
                 14, MUTED, false);
 
         empty.setGravity(Gravity.CENTER);
@@ -233,7 +242,7 @@ public class AdminPanel extends AppCompatActivity {
 
         // Footer
         TextView footer = text(
-                "LEARNTECH ADMIN • DEVELOPMENT PREVIEW",
+                "LEARNTECH ADMIN",
                 10, Color.rgb(205, 216, 229), true);
 
         footer.setGravity(Gravity.CENTER);
@@ -419,14 +428,6 @@ public class AdminPanel extends AppCompatActivity {
         box.setClickable(true);
         box.setFocusable(true);
         box.setOnClickListener(v -> action.run());
-    }
-
-    private void openSection(String section) {
-        Toast.makeText(
-                this,
-                section + " screen will be added next.",
-                Toast.LENGTH_SHORT
-        ).show();
     }
 
     private LinearLayout card() {

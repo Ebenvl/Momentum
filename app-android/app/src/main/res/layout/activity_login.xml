@@ -1,150 +1,162 @@
-
-<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Log in, in the same look as the main screens: the navy background image,
+     the logo in a white circle, a white card for the fields, and the purple to
+     teal button. -->
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
-    android:layout_height="match_parent"
-    android:fillViewport="true"
-    android:background="@color/ltm_background">
+    android:layout_height="match_parent">
 
-    <LinearLayout
+    <ImageView
         android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:minHeight="600dp"
-        android:orientation="vertical"
-        android:gravity="center"
-        android:padding="24dp">
+        android:layout_height="match_parent"
+        android:contentDescription="@null"
+        android:scaleType="centerCrop"
+        android:src="@drawable/app_bg" />
 
-        <TextView
+    <ScrollView
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:fillViewport="true"
+        android:fitsSystemWindows="true">
+
+        <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="LearnTech"
-            android:textSize="32sp"
-            android:textStyle="bold"
-            android:textColor="@color/ltm_navy"
-            android:gravity="center" />
+            android:gravity="center_horizontal"
+            android:orientation="vertical"
+            android:padding="24dp">
 
-        <TextView
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="MOMENTUM"
-            android:textSize="25sp"
-            android:textStyle="bold"
-            android:textColor="@color/ltm_blue"
-            android:gravity="center" />
+            <ImageView
+                android:layout_width="84dp"
+                android:layout_height="84dp"
+                android:layout_marginTop="16dp"
+                android:background="@drawable/bg_logo_circle"
+                android:contentDescription="LearnTech logo"
+                android:padding="12dp"
+                android:scaleType="fitCenter"
+                android:src="@drawable/minimalist_logo" />
 
-        <TextView
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="LEARN  •  GROW  •  ACHIEVE"
-            android:textSize="13sp"
-            android:textStyle="bold"
-            android:textColor="@color/ltm_green"
-            android:gravity="center"
-            android:layout_marginTop="8dp"
-            android:layout_marginBottom="32dp" />
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="16dp"
+                android:text="LearnTech Momentum"
+                android:textColor="@color/ltm_white"
+                android:textSize="26sp"
+                android:textStyle="bold" />
 
-        <TextView
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="Welcome Back!"
-            android:textSize="28sp"
-            android:textStyle="bold"
-            android:textColor="@color/ltm_navy"
-            android:gravity="center" />
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="4dp"
+                android:letterSpacing="0.15"
+                android:text="LEARN  •  GROW  •  ACHIEVE"
+                android:textColor="#F4B942"
+                android:textSize="12sp"
+                android:textStyle="bold" />
 
-        <TextView
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="Continue your learning journey"
-            android:textSize="15sp"
-            android:textColor="@color/ltm_muted"
-            android:gravity="center"
-            android:layout_marginTop="8dp"
-            android:layout_marginBottom="28dp" />
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="28dp"
+                android:background="@drawable/bg_card"
+                android:orientation="vertical"
+                android:padding="20dp">
 
-        <EditText
-            android:id="@+id/editEmail"
-            android:layout_width="match_parent"
-            android:layout_height="56dp"
-            android:hint="Email address"
-            android:inputType="textEmailAddress"
-            android:singleLine="true"
-            android:textColor="@color/ltm_text"
-            android:textColorHint="@color/ltm_muted"
-            android:background="@drawable/bg_input"
-            android:layout_marginBottom="14dp"
-            android:padding="12dp"
-            android:autofillHints="emailAddress" />
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Welcome back!"
+                    android:textColor="@color/ltm_navy"
+                    android:textSize="22sp"
+                    android:textStyle="bold" />
 
-        <EditText
-            android:id="@+id/editPassword"
-            android:layout_width="match_parent"
-            android:layout_height="56dp"
-            android:hint="Password"
-            android:inputType="textPassword"
-            android:singleLine="true"
-            android:textColor="@color/ltm_text"
-            android:textColorHint="@color/ltm_muted"
-            android:background="@drawable/bg_input"
-            android:padding="12dp"
-            android:layout_marginBottom="4dp"
-            android:autofillHints="password" />
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="4dp"
+                    android:text="Continue your learning journey"
+                    android:textColor="@color/ltm_muted"
+                    android:textSize="14sp" />
 
-        <TextView
-            android:id="@+id/tvForgotPassword"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="Forgot Password?"
-            android:textColor="@color/ltm_blue"
-            android:textSize="14sp"
-            android:textStyle="bold"
-            android:padding="12dp"
-            android:layout_gravity="end"
-            android:clickable="true"
-            android:focusable="true" />
+                <EditText
+                    android:id="@+id/editEmail"
+                    android:layout_width="match_parent"
+                    android:layout_height="52dp"
+                    android:layout_marginTop="20dp"
+                    android:background="@drawable/bg_input"
+                    android:hint="Email"
+                    android:inputType="textEmailAddress"
+                    android:textColor="@color/ltm_text"
+                    android:textColorHint="@color/ltm_muted" />
 
-        <ProgressBar
-            android:id="@+id/progressBar"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:visibility="gone"
-            android:indeterminateTint="@color/ltm_blue"
-            android:layout_margin="12dp" />
+                <EditText
+                    android:id="@+id/editPassword"
+                    android:layout_width="match_parent"
+                    android:layout_height="52dp"
+                    android:layout_marginTop="12dp"
+                    android:background="@drawable/bg_input"
+                    android:hint="Password"
+                    android:inputType="textPassword"
+                    android:textColor="@color/ltm_text"
+                    android:textColorHint="@color/ltm_muted" />
 
-        <Button
-            android:id="@+id/btnLogin"
-            android:layout_width="match_parent"
-            android:layout_height="56dp"
-            android:text="LOG IN"
-            android:textColor="@color/ltm_white"
-            android:textStyle="bold"
-            android:textSize="16sp"
-            android:background="@drawable/bg_primary_button"
-            android:backgroundTint="@null"
-            android:stateListAnimator="@null"
-            android:layout_marginTop="8dp" />
+                <TextView
+                    android:id="@+id/tvForgotPassword"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_gravity="end"
+                    android:layout_marginTop="10dp"
+                    android:padding="4dp"
+                    android:text="Forgot password?"
+                    android:textColor="@color/ltm_blue"
+                    android:textSize="13sp"
+                    android:textStyle="bold" />
 
-        <TextView
-            android:id="@+id/tvGoToSignup"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="Don't have an account? Sign up"
-            android:textColor="@color/ltm_blue"
-            android:textSize="15sp"
-            android:padding="16dp"
-            android:layout_marginTop="12dp"
-            android:clickable="true"
-            android:focusable="true" />
+                <ProgressBar
+                    android:id="@+id/progressBar"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_gravity="center_horizontal"
+                    android:layout_marginTop="8dp"
+                    android:indeterminateTint="@color/ltm_blue"
+                    android:visibility="gone" />
 
-        <TextView
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="BETTER SKILLS  •  BRIGHTER FUTURES"
-            android:textColor="@color/ltm_green"
-            android:textSize="11sp"
-            android:textStyle="bold"
-            android:gravity="center"
-            android:layout_marginTop="16dp"
-            android:layout_marginBottom="12dp" />
+                <!-- AppCompatButton keeps the gradient. A plain Button would be
+                     recoloured by the theme. -->
+                <androidx.appcompat.widget.AppCompatButton
+                    android:id="@+id/btnLogin"
+                    android:layout_width="match_parent"
+                    android:layout_height="54dp"
+                    android:layout_marginTop="16dp"
+                    android:background="@drawable/bg_gradient_button"
+                    android:text="Log in"
+                    android:textAllCaps="false"
+                    android:textColor="@color/ltm_white"
+                    android:textSize="16sp"
+                    android:textStyle="bold" />
+            </LinearLayout>
 
-    </LinearLayout>
-</ScrollView>
+            <TextView
+                android:id="@+id/tvGoToSignup"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="20dp"
+                android:padding="8dp"
+                android:text="Don't have an account? Sign up"
+                android:textColor="@color/ltm_white"
+                android:textSize="14sp"
+                android:textStyle="bold" />
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="24dp"
+                android:letterSpacing="0.1"
+                android:text="BETTER SKILLS  •  BRIGHTER FUTURES"
+                android:textColor="#F4B942"
+                android:textSize="11sp"
+                android:textStyle="bold" />
+        </LinearLayout>
+    </ScrollView>
+</FrameLayout>

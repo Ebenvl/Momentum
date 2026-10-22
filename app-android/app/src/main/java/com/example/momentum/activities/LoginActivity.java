@@ -11,14 +11,13 @@ import android.widget.ProgressBar;
 import android.widget.TextView;
 import android.widget.Toast;
 
-import androidx.appcompat.app.AppCompatActivity;
 
 import com.example.momentum.R;
 import com.example.momentum.data.ApiCallback;
 import com.example.momentum.model.User;
 import com.example.momentum.service.AuthService;
 
-public class LoginActivity extends AppCompatActivity {
+public class LoginActivity extends BaseActivity {
 
     private EditText editEmail;
     private EditText editPassword;

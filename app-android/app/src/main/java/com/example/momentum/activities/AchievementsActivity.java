@@ -4,20 +4,24 @@ package com.example.momentum.activities;
 import android.content.SharedPreferences;
 import android.os.Bundle;
 import android.util.Log;
+import android.view.View;
 import android.widget.Button;
+import android.widget.LinearLayout;
 import android.widget.ProgressBar;
 import android.widget.TextView;
 import android.widget.Toast;
 
-import androidx.appcompat.app.AppCompatActivity;
 
 import com.example.momentum.R;
 import com.example.momentum.data.ApiCallback;
 import com.example.momentum.data.Session;
+import com.example.momentum.model.Badge;
 import com.example.momentum.model.Enrolment;
 import com.example.momentum.model.Goal;
+import com.example.momentum.model.User;
 import com.example.momentum.service.CourseService;
 import com.example.momentum.service.GoalService;
+import com.example.momentum.service.ProfileService;
 
 import java.text.SimpleDateFormat;
 import java.util.Calendar;
@@ -25,12 +29,13 @@ import java.util.Date;
 import java.util.List;
 import java.util.Locale;
 
-public class AchievementsActivity extends AppCompatActivity {
+public class AchievementsActivity extends BaseActivity {
 
     private static final String TAG = "AchievementsActivity";
 
     private final CourseService courseService = new CourseService();
     private final GoalService goalService = new GoalService();
+    private final ProfileService profileService = new ProfileService();
     private int userId;
 
     private TextView tvCompletedCourses;
@@ -90,6 +95,66 @@ public class AchievementsActivity extends AppCompatActivity {
 
         loadStudyStreak();
         loadAchievements();
+
+
+        // The streak and badges the backend keeps, from check-ins and badge rules.
+        loadBackendStreak();
+        loadEarnedBadges();
+    }
+
+
+    // Shows the streak from the learner's check-ins, which the backend keeps.
+    private void loadBackendStreak() {
+        profileService.getMe(new ApiCallback<User>() {
+            @Override
+            public void onSuccess(User me) {
+                int streak = me.currentStreak != null ? me.currentStreak : 0;
+                tvStudyStreak.setText("🔥 Study streak: " + streak + (streak == 1 ? " day" : " days"));
+            }
+
+            @Override
+            public void onError(String error) {
+                Log.e(TAG, "Could not load the streak: " + error);
+            }
+        });
+    }
+
+    // Lists the badges the learner has earned, each with its points.
+    private void loadEarnedBadges() {
+        LinearLayout list = findViewById(R.id.llEarnedBadges);
+        TextView none = findViewById(R.id.tvNoEarnedBadges);
+
+        profileService.getMyBadges(new ApiCallback<List<Badge>>() {
+            @Override
+            public void onSuccess(List<Badge> badges) {
+                list.removeAllViews();
+                none.setVisibility(badges.isEmpty() ? View.VISIBLE : View.GONE);
+
+                // One card per badge, in the same style as the cards above
+                for (Badge badge : badges) {
+                    TextView card = new TextView(AchievementsActivity.this);
+                    String text = "🏅 " + badge.name + "  +" + badge.pointsAwarded + " XP";
+                    if (badge.description != null && !badge.description.isEmpty()) {
+                        text += "\n" + badge.description;
+                    }
+                    card.setText(text);
+                    card.setTextColor(getResources().getColor(R.color.ltm_navy));
+                    card.setTextSize(15);
+                    card.setBackgroundResource(R.drawable.bg_card);
+                    int padding = Math.round(16 * getResources().getDisplayMetrics().density);
+                    card.setPadding(padding, padding, padding, padding);
+                    LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(
+                            LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
+                    lp.topMargin = Math.round(12 * getResources().getDisplayMetrics().density);
+                    list.addView(card, lp);
+                }
+            }
+
+            @Override
+            public void onError(String error) {
+                Log.e(TAG, "Could not load badges: " + error);
+            }
+        });
     }
 
     private void loadAchievements() {

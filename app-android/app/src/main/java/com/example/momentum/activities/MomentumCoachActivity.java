@@ -7,7 +7,6 @@ import android.widget.Button;
 import android.widget.TextView;
 import android.widget.Toast;
 
-import androidx.appcompat.app.AppCompatActivity;
 
 import com.example.momentum.MainActivity;
 import com.example.momentum.R;
@@ -22,7 +21,7 @@ import com.example.momentum.service.GoalService;
 import java.util.ArrayList;
 import java.util.List;
 
-public class MomentumCoachActivity extends AppCompatActivity {
+public class MomentumCoachActivity extends BaseActivity {
 
     private TextView tvCoachGreeting;
     private TextView tvCoachSummary;

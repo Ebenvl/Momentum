@@ -20,6 +20,7 @@ public class AuthController {
     private final TokenService tokenService;
     private final ActivityLogRepository activityLogRepository;
     private final SyncService syncService;
+    private final LoginLimiter loginLimiter = new LoginLimiter();
 
     public AuthController(UserRepository userRepository, TokenService tokenService,
                           ActivityLogRepository activityLogRepository, SyncService syncService) {
@@ -57,7 +58,11 @@ public class AuthController {
             return;
         }
 
-        // Basic format checks.
+        // Basic format checks. The lengths match the Users table.
+        if (request.email.length() > 255 || request.fullName.length() > 150) {
+            ctx.status(400).json(Map.of("error", "email or name is too long"));
+            return;
+        }
         if (!request.email.contains("@")) {
             ctx.status(400).json(Map.of("error", "email is not valid"));
             return;
@@ -118,22 +123,36 @@ public class AuthController {
             return;
         }
 
+        // Too many wrong tries for this email or from this IP: refuse for a while.
+        String emailKey = "email:" + request.email.trim().toLowerCase();
+        String ipKey = "ip:" + ctx.ip();
+        if (loginLimiter.isBlocked(emailKey, LoginLimiter.MAX_PER_EMAIL)
+                || loginLimiter.isBlocked(ipKey, LoginLimiter.MAX_PER_IP)) {
+            ctx.status(429).json(Map.of("error", "too many wrong tries, wait 5 minutes and try again"));
+            return;
+        }
+
         try {
             User user = userRepository.findUserByEmail(request.email);
 
             // Same message for a wrong email and a wrong password, so nobody
             // can use login to find out which emails are registered.
             if (user == null) {
+                loginLimiter.recordFailure(emailKey);
+                loginLimiter.recordFailure(ipKey);
                 activityLogRepository.log(null, "failed login: unknown email", "warning");
                 ctx.status(401).json(Map.of("error", "wrong email or password"));
                 return;
             }
 
             if (!BCrypt.checkpw(request.password, user.passwordHash)) {
+                loginLimiter.recordFailure(emailKey);
+                loginLimiter.recordFailure(ipKey);
                 activityLogRepository.log(user.userId, "failed login: wrong password", "warning");
                 ctx.status(401).json(Map.of("error", "wrong email or password"));
                 return;
             }
+            loginLimiter.clear(emailKey);
 
             if (user.status.equals("suspended")) {
                 activityLogRepository.log(user.userId, "failed login: account suspended", "warning");

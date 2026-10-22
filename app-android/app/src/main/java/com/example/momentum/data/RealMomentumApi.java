@@ -5,10 +5,14 @@ import android.os.Looper;
 
 import com.example.momentum.model.ActivityLog;
 import com.example.momentum.model.AdminStats;
+import com.example.momentum.model.Badge;
+import com.example.momentum.model.CheckIn;
 import com.example.momentum.model.Course;
+import com.example.momentum.model.CourseStat;
 import com.example.momentum.model.Enrolment;
 import com.example.momentum.model.Goal;
 import com.example.momentum.model.LeaderboardEntry;
+import com.example.momentum.model.PlatformSettings;
 import com.example.momentum.model.StudySession;
 import com.example.momentum.model.User;
 
@@ -72,6 +76,60 @@ public class RealMomentumApi implements MomentumApi {
         });
     }
 
+    @Override
+    public void getMe(ApiCallback<User> callback) {
+        run(callback, () -> {
+            JSONObject row = new JSONObject(send("GET", "/me", null));
+            User user = new User(row.getInt("userId"), optInt(row, "idst"),
+                    row.getString("email"), row.getString("fullName"),
+                    row.getString("role"), row.getString("status"));
+            user.totalPoints = optInt(row, "totalPoints");
+            user.currentStreak = optInt(row, "currentStreak");
+            user.longestStreak = optInt(row, "longestStreak");
+            return user;
+        });
+    }
+
+    @Override
+    public void updateName(String fullName, ApiCallback<Void> callback) {
+        run(callback, () -> {
+            JSONObject body = new JSONObject();
+            body.put("fullName", fullName);
+            send("PUT", "/me", body);
+            return null;
+        });
+    }
+
+    @Override
+    public void changePassword(String currentPassword, String newPassword, ApiCallback<Void> callback) {
+        run(callback, () -> {
+            JSONObject body = new JSONObject();
+            body.put("currentPassword", currentPassword);
+            body.put("newPassword", newPassword);
+            send("PUT", "/me/password", body);
+            return null;
+        });
+    }
+
+    @Override
+    public void getMyBadges(ApiCallback<List<Badge>> callback) {
+        run(callback, () -> {
+            JSONArray rows = new JSONArray(send("GET", "/me/badges", null));
+            List<Badge> badges = new ArrayList<>();
+            for (int i = 0; i < rows.length(); i++) {
+                JSONObject row = rows.getJSONObject(i);
+                Badge badge = new Badge();
+                badge.id = row.getInt("badgeId");
+                badge.name = row.getString("name");
+                badge.description = optString(row, "description");
+                badge.pointsAwarded = row.optInt("pointsAwarded");
+                badge.awardedAt = optString(row, "awardedAt");
+                badges.add(badge);
+            }
+            return badges;
+        });
+    }
+
     // -----------------------------------------------------
     // Courses
     // -----------------------------------------------------
@@ -85,6 +143,7 @@ public class RealMomentumApi implements MomentumApi {
                 JSONObject row = rows.getJSONObject(i);
                 Course course = new Course();
                 course.courseId = row.getInt("courseId");
+                course.platformCourseId = row.getInt("platformCourseId");
                 course.name = row.getString("courseName");
                 course.expectedMinutes = optInt(row, "expectedMinutes");
                 course.pointsValue = optInt(row, "pointsValue");
@@ -106,6 +165,7 @@ public class RealMomentumApi implements MomentumApi {
                 enrolment.state = row.getString("state");
                 enrolment.timeSpentMinutes = row.optInt("timeSpentMinutes");
                 enrolment.completedOn = optString(row, "completedOn");
+                enrolment.pointsEarned = optInt(row, "pointsEarned");
                 enrolments.add(enrolment);
             }
             return enrolments;
@@ -139,20 +199,6 @@ public class RealMomentumApi implements MomentumApi {
         });
     }
 
-    // A goal with a course becomes "complete this course", otherwise free text.
-    @Override
-    public void createGoal(String title, Integer targetCourseId, String targetDate, ApiCallback<Void> callback) {
-        run(callback, () -> {
-            JSONObject body = new JSONObject();
-            body.put("title", title);
-            body.put("goalType", targetCourseId != null ? "complete_specific_course" : "free_text");
-            body.put("targetCourseId", targetCourseId != null ? targetCourseId : JSONObject.NULL);
-            body.put("targetDate", targetDate != null ? targetDate : JSONObject.NULL);
-            send("POST", "/goals", body);
-            return null;
-        });
-    }
-
     @Override
     public void setGoalStatus(int goalId, String status, ApiCallback<Void> callback) {
         run(callback, () -> {
@@ -171,14 +217,62 @@ public class RealMomentumApi implements MomentumApi {
         });
     }
 
+    @Override
+    public void saveGoal(Integer goalId, String title, String goalType, Integer targetValue,
+                         Integer targetCourseId, String targetDate, ApiCallback<Void> callback) {
+        run(callback, () -> {
+            JSONObject body = new JSONObject();
+            body.put("title", title);
+            body.put("goalType", goalType);
+            body.put("targetValue", targetValue != null ? targetValue : JSONObject.NULL);
+            body.put("targetCourseId", targetCourseId != null ? targetCourseId : JSONObject.NULL);
+            body.put("targetDate", targetDate != null ? targetDate : JSONObject.NULL);
+            if (goalId == null) {
+                send("POST", "/goals", body);
+            } else {
+                send("PUT", "/goals/" + goalId, body);
+            }
+            return null;
+        });
+    }
+
+    @Override
+    public void logCheckIn(int goalId, String note, Integer valueLogged, ApiCallback<Void> callback) {
+        run(callback, () -> {
+            JSONObject body = new JSONObject();
+            body.put("note", note != null ? note : JSONObject.NULL);
+            body.put("valueLogged", valueLogged != null ? valueLogged : JSONObject.NULL);
+            send("POST", "/goals/" + goalId + "/checkins", body);
+            return null;
+        });
+    }
+
+    @Override
+    public void getCheckIns(int goalId, ApiCallback<List<CheckIn>> callback) {
+        run(callback, () -> {
+            JSONArray rows = new JSONArray(send("GET", "/goals/" + goalId + "/checkins", null));
+            List<CheckIn> checkIns = new ArrayList<>();
+            for (int i = 0; i < rows.length(); i++) {
+                JSONObject row = rows.getJSONObject(i);
+                CheckIn checkIn = new CheckIn();
+                checkIn.id = row.getInt("checkinId");
+                checkIn.note = optString(row, "note");
+                checkIn.valueLogged = optInt(row, "valueLogged");
+                checkIn.loggedAt = row.getString("loggedAt");
+                checkIns.add(checkIn);
+            }
+            return checkIns;
+        });
+    }
+
     // -----------------------------------------------------
     // Leaderboard
     // -----------------------------------------------------
 
     @Override
-    public void getLeaderboard(ApiCallback<List<LeaderboardEntry>> callback) {
+    public void getLeaderboard(boolean allTime, ApiCallback<List<LeaderboardEntry>> callback) {
         run(callback, () -> {
-            JSONArray rows = new JSONArray(send("GET", "/leaderboard", null));
+            JSONArray rows = new JSONArray(send("GET", allTime ? "/leaderboard?period=all" : "/leaderboard", null));
             List<LeaderboardEntry> entries = new ArrayList<>();
             for (int i = 0; i < rows.length(); i++) {
                 JSONObject row = rows.getJSONObject(i);
@@ -255,6 +349,8 @@ public class RealMomentumApi implements MomentumApi {
             stats.activeCourses = row.getInt("activeCourses");
             stats.completionRate = row.getInt("completionRate");
             stats.engagement = row.getInt("engagement");
+            stats.activeLearners = row.optInt("activeLearners");
+            stats.totalMinutes = row.optInt("totalMinutes");
             return stats;
         });
     }
@@ -302,6 +398,165 @@ public class RealMomentumApi implements MomentumApi {
             }
             return logs;
         });
+    }
+
+
+    @Override
+    public void getCourseStats(ApiCallback<List<CourseStat>> callback) {
+        run(callback, () -> {
+            JSONArray rows = new JSONArray(send("GET", "/admin/course-stats", null));
+            List<CourseStat> courseStats = new ArrayList<>();
+            for (int i = 0; i < rows.length(); i++) {
+                JSONObject row = rows.getJSONObject(i);
+                CourseStat courseStat = new CourseStat();
+                courseStat.courseName = row.getString("courseName");
+                courseStat.enrolled = row.getInt("enrolled");
+                courseStat.completed = row.getInt("completed");
+                courseStats.add(courseStat);
+            }
+            return courseStats;
+        });
+    }
+
+    @Override
+    public void createUser(String email, String password, String fullName, String role,
+                           ApiCallback<Void> callback) {
+        run(callback, () -> {
+            JSONObject body = new JSONObject();
+            body.put("email", email);
+            body.put("password", password);
+            body.put("fullName", fullName);
+            body.put("role", role);
+            send("POST", "/admin/users", body);
+            return null;
+        });
+    }
+
+    @Override
+    public void updateUser(int userId, String fullName, String role, ApiCallback<Void> callback) {
+        run(callback, () -> {
+            JSONObject body = new JSONObject();
+            body.put("fullName", fullName);
+            body.put("role", role);
+            send("PUT", "/admin/users/" + userId, body);
+            return null;
+        });
+    }
+
+    @Override
+    public void setUserStatus(int userId, String status, ApiCallback<Void> callback) {
+        run(callback, () -> {
+            JSONObject body = new JSONObject();
+            body.put("status", status);
+            send("PUT", "/admin/users/" + userId + "/status", body);
+            return null;
+        });
+    }
+
+    @Override
+    public void linkUser(int userId, Integer idst, ApiCallback<Void> callback) {
+        run(callback, () -> {
+            JSONObject body = new JSONObject();
+            body.put("idst", idst != null ? idst : JSONObject.NULL);
+            send("PUT", "/admin/users/" + userId + "/link", body);
+            return null;
+        });
+    }
+
+    @Override
+    public void updateCourse(int courseId, Integer pointsValue, Integer expectedMinutes,
+                             ApiCallback<Void> callback) {
+        run(callback, () -> {
+            JSONObject body = new JSONObject();
+            body.put("pointsValue", pointsValue != null ? pointsValue : JSONObject.NULL);
+            body.put("expectedMinutes", expectedMinutes != null ? expectedMinutes : JSONObject.NULL);
+            send("PUT", "/admin/courses/" + courseId, body);
+            return null;
+        });
+    }
+
+    @Override
+    public void getAllBadges(ApiCallback<List<Badge>> callback) {
+        run(callback, () -> {
+            JSONArray rows = new JSONArray(send("GET", "/admin/badges", null));
+            List<Badge> badges = new ArrayList<>();
+            for (int i = 0; i < rows.length(); i++) {
+                JSONObject row = rows.getJSONObject(i);
+                Badge badge = new Badge();
+                badge.id = row.getInt("badgeId");
+                badge.name = row.getString("name");
+                badge.description = optString(row, "description");
+                badge.ruleType = optString(row, "ruleType");
+                badge.ruleValue = row.optInt("ruleValue");
+                badge.pointsAwarded = row.optInt("pointsAwarded");
+                badge.isActive = row.optBoolean("isActive", true);
+                badges.add(badge);
+            }
+            return badges;
+        });
+    }
+
+    @Override
+    public void saveBadge(Integer badgeId, Badge badge, ApiCallback<Void> callback) {
+        run(callback, () -> {
+            JSONObject body = new JSONObject();
+            body.put("name", badge.name);
+            body.put("description", badge.description != null ? badge.description : JSONObject.NULL);
+            body.put("ruleType", badge.ruleType);
+            body.put("ruleValue", badge.ruleValue);
+            body.put("pointsAwarded", badge.pointsAwarded);
+            body.put("isActive", badge.isActive);
+            if (badgeId == null) {
+                send("POST", "/admin/badges", body);
+            } else {
+                send("PUT", "/admin/badges/" + badgeId, body);
+            }
+            return null;
+        });
+    }
+
+    @Override
+    public void deleteBadge(int badgeId, ApiCallback<Void> callback) {
+        run(callback, () -> {
+            send("DELETE", "/admin/badges/" + badgeId, null);
+            return null;
+        });
+    }
+
+    @Override
+    public void getSettings(ApiCallback<PlatformSettings> callback) {
+        run(callback, () -> {
+            JSONObject row = new JSONObject(send("GET", "/admin/settings", null));
+            PlatformSettings settings = new PlatformSettings();
+            settings.platformUrl = optString(row, "platformUrl");
+            settings.apiKey = optString(row, "apiKey");
+            settings.apiSecret = optString(row, "apiSecret");
+            settings.lastTestedAt = optString(row, "lastTestedAt");
+            settings.savedByAdmin = row.optBoolean("savedByAdmin");
+            return settings;
+        });
+    }
+
+    @Override
+    public void saveSettings(String platformUrl, String apiKey, String apiSecret, ApiCallback<Void> callback) {
+        run(callback, () -> {
+            JSONObject body = new JSONObject();
+            body.put("platformUrl", platformUrl);
+            body.put("apiKey", apiKey != null ? apiKey : JSONObject.NULL);
+            body.put("apiSecret", apiSecret != null ? apiSecret : JSONObject.NULL);
+            send("PUT", "/admin/settings", body);
+            return null;
+        });
+    }
+
+    @Override
+    public void testConnection(ApiCallback<Integer> callback) {
+        run(callback, () -> new JSONObject(send("POST", "/admin/settings/test", null)).getInt("courses"));
+    }
+
+    @Override
+    public void exportTable(String table, ApiCallback<String> callback) {
+        run(callback, () -> send("GET", "/admin/export/" + table, null));
     }
 
     // -----------------------------------------------------
@@ -375,8 +630,9 @@ public class RealMomentumApi implements MomentumApi {
         StringBuilder text = new StringBuilder();
         try (BufferedReader reader = new BufferedReader(new InputStreamReader(stream, StandardCharsets.UTF_8))) {
             String line;
+            // Line breaks are kept, so CSV exports stay one row per line
             while ((line = reader.readLine()) != null) {
-                text.append(line);
+                text.append(line).append('\n');
             }
         }
         return text.toString();

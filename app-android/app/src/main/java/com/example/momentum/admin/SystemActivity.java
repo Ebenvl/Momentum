@@ -1,5 +1,6 @@
 package com.example.momentum.admin;
 
+import com.example.momentum.activities.BaseActivity;
 import android.graphics.Color;
 import android.graphics.Typeface;
 import android.graphics.drawable.GradientDrawable;
@@ -15,7 +16,6 @@ import android.widget.TextView;
 
 import android.widget.Toast;
 
-import androidx.appcompat.app.AppCompatActivity;
 
 import com.example.momentum.data.ApiCallback;
 import com.example.momentum.model.ActivityLog;
@@ -25,7 +25,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
 
-public class SystemActivity extends AppCompatActivity {
+public class SystemActivity extends BaseActivity {
 
     private final int NAVY = Color.rgb(7, 29, 53);
     private final int PURPLE = Color.rgb(118, 102, 232);

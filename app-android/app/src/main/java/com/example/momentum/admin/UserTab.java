@@ -1,5 +1,6 @@
 package com.example.momentum.admin;
 
+import com.example.momentum.activities.BaseActivity;
 import android.app.AlertDialog;
 import android.content.res.ColorStateList;
 import android.graphics.Color;
@@ -21,7 +22,6 @@ import android.widget.Spinner;
 import android.widget.TextView;
 import android.widget.Toast;
 
-import androidx.appcompat.app.AppCompatActivity;
 
 import com.example.momentum.data.ApiCallback;
 import com.example.momentum.model.User;
@@ -31,7 +31,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
 
-public class UserTab extends AppCompatActivity {
+public class UserTab extends BaseActivity {
 
     private final int NAVY = Color.rgb(7, 29, 53);
     private final int ORANGE = Color.rgb(228, 108, 40);
@@ -353,23 +353,123 @@ public class UserTab extends AppCompatActivity {
         status.setBackground(round(active ? TEAL : ORANGE, 10));
         row.addView(status);
 
-        row.setOnClickListener(v -> confirmDeleteUser(user.fullName, () ->
-                adminService.deleteUser(user.id, new ApiCallback<Void>() {
-                    @Override
-                    public void onSuccess(Void result) {
-                        Toast.makeText(UserTab.this,
-                                user.fullName + " was deleted",
-                                Toast.LENGTH_SHORT).show();
-                        loadUsers();
-                    }
-
-                    @Override
-                    public void onError(String message) {
-                        Toast.makeText(UserTab.this, message, Toast.LENGTH_LONG).show();
-                    }
-                })));
+        row.setOnClickListener(v -> showUserOptions(user));
 
         return row;
+    }
+
+
+    // Everything an admin can do to an account, from tapping it in the list.
+    private void showUserOptions(User user) {
+        boolean active = "active".equals(user.status);
+        String[] options = {
+                "Edit name and role",
+                active ? "Suspend account" : "Reactivate account",
+                user.isLinked() ? "Change LearnTech link (now " + user.idst + ")" : "Link to a LearnTech learner",
+                "Delete account"};
+
+        new AlertDialog.Builder(this)
+                .setTitle(user.fullName)
+                .setItems(options, (dialog, which) -> {
+                    if (which == 0) {
+                        showEditUserDialog(user);
+                    } else if (which == 1) {
+                        if (active) {
+                            adminService.suspendUser(user.id, reloadAfter(user.fullName + " was suspended"));
+                        } else {
+                            adminService.reactivateUser(user.id, reloadAfter(user.fullName + " was reactivated"));
+                        }
+                    } else if (which == 2) {
+                        showLinkDialog(user);
+                    } else {
+                        confirmDeleteUser(user.fullName, () ->
+                                adminService.deleteUser(user.id, reloadAfter(user.fullName + " was deleted")));
+                    }
+                })
+                .show();
+    }
+
+    // Change someone's name, and whether they're a learner or an admin.
+    private void showEditUserDialog(User user) {
+        LinearLayout form = new LinearLayout(this);
+        form.setOrientation(LinearLayout.VERTICAL);
+        form.setPadding(dp(4), dp(8), dp(4), dp(4));
+
+        EditText nameInput = formInput("Full name", InputType.TYPE_CLASS_TEXT
+                | InputType.TYPE_TEXT_FLAG_CAP_WORDS);
+        nameInput.setText(user.fullName);
+        form.addView(nameInput);
+
+        Spinner roleSpinner = new Spinner(this);
+        ArrayAdapter<String> adapter = new ArrayAdapter<>(
+                this, android.R.layout.simple_spinner_dropdown_item, new String[]{"Learner", "Admin"});
+        roleSpinner.setAdapter(adapter);
+        roleSpinner.setSelection(user.isAdmin() ? 1 : 0);
+        form.addView(roleSpinner);
+
+        new AlertDialog.Builder(this)
+                .setTitle("Edit " + user.fullName)
+                .setView(form)
+                .setNegativeButton("Cancel", null)
+                .setPositiveButton("Save", (dialog, which) -> {
+                    String name = nameInput.getText().toString().trim();
+                    if (name.isEmpty()) {
+                        Toast.makeText(this, "Enter a name", Toast.LENGTH_SHORT).show();
+                        return;
+                    }
+                    String role = roleSpinner.getSelectedItemPosition() == 1 ? "administrator" : "learner";
+                    adminService.updateUser(user.id, name, role, reloadAfter(name + " was updated"));
+                })
+                .show();
+    }
+
+    // Link an account to a LearnTech learner by their id (idst), for when the
+    // emails don't match. An empty box unlinks it.
+    private void showLinkDialog(User user) {
+        LinearLayout form = new LinearLayout(this);
+        form.setOrientation(LinearLayout.VERTICAL);
+        form.setPadding(dp(4), dp(8), dp(4), dp(4));
+
+        EditText idstInput = formInput("LearnTech learner id (empty to unlink)", InputType.TYPE_CLASS_NUMBER);
+        if (user.idst != null) {
+            idstInput.setText(String.valueOf(user.idst));
+        }
+        form.addView(idstInput);
+
+        new AlertDialog.Builder(this)
+                .setTitle("LearnTech link")
+                .setMessage("Their courses and points arrive on the next sync.")
+                .setView(form)
+                .setNegativeButton("Cancel", null)
+                .setPositiveButton("Save", (dialog, which) -> {
+                    String typed = idstInput.getText().toString().trim();
+                    Integer idst;
+                    try {
+                        idst = typed.isEmpty() ? null : Integer.parseInt(typed);
+                    } catch (NumberFormatException e) {
+                        Toast.makeText(this, "The id must be a number", Toast.LENGTH_SHORT).show();
+                        return;
+                    }
+                    adminService.linkUser(user.id, idst, reloadAfter(idst == null
+                            ? user.fullName + " was unlinked" : user.fullName + " was linked"));
+                })
+                .show();
+    }
+
+    // Shows a message and reloads the list when a change worked.
+    private ApiCallback<Void> reloadAfter(String message) {
+        return new ApiCallback<Void>() {
+            @Override
+            public void onSuccess(Void result) {
+                Toast.makeText(UserTab.this, message, Toast.LENGTH_SHORT).show();
+                loadUsers();
+            }
+
+            @Override
+            public void onError(String error) {
+                Toast.makeText(UserTab.this, error, Toast.LENGTH_LONG).show();
+            }
+        };
     }
 
     // "Active today", "Active yesterday", "Active 6 days ago" or "Never logged in"
@@ -417,7 +517,7 @@ public class UserTab extends AppCompatActivity {
         form.addView(confirmInput);
 
         Spinner roleSpinner = new Spinner(this);
-        String[] roles = {"Student", "Instructor", "Admin"};
+        String[] roles = {"Learner", "Admin"};
 
         ArrayAdapter<String> adapter = new ArrayAdapter<>(
                 this, android.R.layout.simple_spinner_item, roles);
@@ -427,8 +527,7 @@ public class UserTab extends AppCompatActivity {
         form.addView(roleSpinner);
 
         TextView note = text(
-                "Preview only. The account will not be saved until "
-                        + "backend authentication is connected.",
+                "They can log in with this email and password straight away.",
                 12, MUTED, false);
 
         LinearLayout.LayoutParams noteParams =
@@ -443,7 +542,7 @@ public class UserTab extends AppCompatActivity {
                 .setTitle("Create User")
                 .setView(formScroll)
                 .setNegativeButton("Cancel", (d, which) -> d.dismiss())
-                .setPositiveButton("Validate", null)
+                .setPositiveButton("Create", null)
                 .create();
 
         dialog.setOnShowListener(ignored ->
@@ -484,15 +583,25 @@ public class UserTab extends AppCompatActivity {
                                 return;
                             }
 
-                            Toast.makeText(
-                                    this,
-                                    "Form validated for "
-                                            + roleSpinner.getSelectedItem()
-                                            + ". No account was saved.",
-                                    Toast.LENGTH_LONG
-                            ).show();
 
-                            dialog.dismiss();
+
+
+                            // Saves the account. The form only closes once it worked.
+                            String role = "Admin".equals(roleSpinner.getSelectedItem())
+                                    ? "administrator" : "learner";
+                            adminService.createUser(email, password, name, role, new ApiCallback<Void>() {
+                                @Override
+                                public void onSuccess(Void result) {
+                                    dialog.dismiss();
+                                    Toast.makeText(UserTab.this, name + " was created", Toast.LENGTH_SHORT).show();
+                                    loadUsers();
+                                }
+
+                                @Override
+                                public void onError(String message) {
+                                    Toast.makeText(UserTab.this, message, Toast.LENGTH_LONG).show();
+                                }
+                            });
                         }));
 
         dialog.show();

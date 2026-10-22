@@ -109,8 +109,12 @@ public class EnrolmentRepository {
     // The learner's courses and how far they are with each, as of the last sync.
     public List<Enrolment> findEnrolmentsForUser(int userId) throws SQLException {
 
+        // points_earned is what this course gave the learner, or null if it hasn't given any (yet).
         String sql = "SELECT enrolment_id, user_id, course_id, state, time_spent_minutes, assessment_status, "
-                   + "score, score_max, first_access, completed_on, last_synced_at "
+                   + "score, score_max, first_access, completed_on, last_synced_at, "
+                   + "(SELECT points FROM PointsTransactions WHERE PointsTransactions.user_id = Enrolments.user_id "
+                   + "AND PointsTransactions.reference_id = Enrolments.course_id "
+                   + "AND PointsTransactions.reason = 'course_completed') AS points_earned "
                    + "FROM Enrolments WHERE user_id = ?";
 
         List<Enrolment> enrolments = new ArrayList<>();
@@ -134,6 +138,7 @@ public class EnrolmentRepository {
                     enrolment.firstAccess = results.getString("first_access");
                     enrolment.completedOn = results.getString("completed_on");
                     enrolment.lastSyncedAt = results.getString("last_synced_at");
+                    enrolment.pointsEarned = results.getObject("points_earned", Integer.class);
                     enrolments.add(enrolment);
                 }
             }

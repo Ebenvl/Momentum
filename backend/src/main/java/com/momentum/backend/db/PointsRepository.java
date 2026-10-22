@@ -44,13 +44,14 @@ public class PointsRepository {
         }
     }
 
-    // This month's leaderboard: everyone's points added up, highest first.
+    // The leaderboard: everyone's points added up, highest first.
+    // monthKey like "2026-10" gives that month, null gives all time.
     public List<LeaderboardEntry> findLeaderboard(String monthKey) throws SQLException {
 
         String sql = "SELECT Users.user_id, Users.full_name, SUM(PointsTransactions.points) AS points "
                    + "FROM PointsTransactions "
                    + "JOIN Users ON Users.user_id = PointsTransactions.user_id "
-                   + "WHERE PointsTransactions.month_key = ? "
+                   + (monthKey != null ? "WHERE PointsTransactions.month_key = ? " : "")
                    + "GROUP BY Users.user_id, Users.full_name "
                    + "ORDER BY points DESC";
 
@@ -61,7 +62,9 @@ public class PointsRepository {
         try (Connection connection = database.getConnection();
              PreparedStatement statement = connection.prepareStatement(sql)) {
 
-            statement.setString(1, monthKey);
+            if (monthKey != null) {
+                statement.setString(1, monthKey);
+            }
 
             try (ResultSet results = statement.executeQuery()) {
                 while (results.next()) {
