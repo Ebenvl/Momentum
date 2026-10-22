@@ -61,6 +61,7 @@ import com.example.momentum.data.AppSettings;
 import com.example.momentum.data.EasterEggs;
 import com.example.momentum.data.Session;
 import com.example.momentum.model.LeaderboardEntry;
+import com.example.momentum.model.ProgressSnapshot;
 import com.example.momentum.model.User;
 import com.example.momentum.service.AuthService;
 import com.example.momentum.service.CourseService;
@@ -104,10 +105,13 @@ public class MainActivity extends BaseActivity {
     private String currentScreen = "main";
     private String courseFilter = "All";
     private String searchQuery = "";
+    private String goalFilter = "All";
+    private String goalSearch = "";
     private String selectedPeriod = "Monthly";
     private final ArrayList<Course> courses = new ArrayList<>();
     private final ArrayList<Goal> goals = new ArrayList<>();
     private final ArrayList<LeaderEntry> leaderboard = new ArrayList<>();
+    private final ArrayList<ProgressSnapshot> progress = new ArrayList<>();
     private String userName = "";
     private int userXp = 0;
     private int streakDays = 0;
@@ -225,12 +229,14 @@ public class MainActivity extends BaseActivity {
         if (savedInstanceState != null) {
             buildAppShell();
             showStudentTab("Home");
+            loadUserIfNew();
         } else {
             showSplash();
 
             new android.os.Handler(android.os.Looper.getMainLooper()).postDelayed(() -> {
                 buildAppShell();
                 showStudentTab("Home");
+                loadUserIfNew();
             }, 1600);
         }
 
@@ -260,6 +266,13 @@ public class MainActivity extends BaseActivity {
         }
 
         if (bottomNavigation == null) return;
+        loadUserIfNew();
+    }
+
+
+    // Loads the logged-in learner's data, once per login. Also runs right after
+    // the splash, for a user who was still logged in from last time.
+    private void loadUserIfNew() {
         if (Session.isLoggedIn() && Session.getUser().id != loadedUserId) {
             loadedUserId = Session.getUser().id;
             userName = Session.getUser().fullName;
@@ -865,20 +878,125 @@ public class MainActivity extends BaseActivity {
         addText(plan, "Plan when you'll study each week, and stick to it.", MUTED, 13, false);
         addButton(plan, "Study timetable", false, v -> openScreen(StudyTimetableActivity.class));
 
-        ArrayList<Goal> active = new ArrayList<>();
-        ArrayList<Goal> done = new ArrayList<>();
-        for (Goal g : goals) {
-            if (g.completed) done.add(g); else active.add(g);
-        }
-
         if (goals.isEmpty()) {
             LinearLayout empty = card(p);
             addText(empty, "No goals added yet", DEEP_NAVY, 17, true);
             addText(empty, "Tap the + button to add your first learning goal.", MUTED, 14, false);
         }
 
+
+        // Search and filter, like on the Courses tab. Only the list below is
+        // redrawn while typing, so the keyboard stays open.
+        LinearLayout list = new LinearLayout(this);
+        list.setOrientation(LinearLayout.VERTICAL);
+        if (!goals.isEmpty()) {
+            LinearLayout searchBox = new LinearLayout(this);
+            searchBox.setOrientation(LinearLayout.HORIZONTAL);
+            searchBox.setGravity(Gravity.CENTER_VERTICAL);
+            searchBox.setPadding(dp(18), 0, dp(14), 0);
+            searchBox.setBackground(rounded(WHITE, 28));
+            searchBox.addView(iconView("search", MUTED, 22));
+            EditText search = new EditText(this);
+            search.setSingleLine(true);
+            search.setTextSize(14);
+            search.setTextColor(darkText(DEEP_NAVY));
+            search.setHintTextColor(darkText(MUTED));
+            search.setHint("Search goals or courses...");
+            search.setBackgroundColor(Color.TRANSPARENT);
+            search.setPadding(dp(12), 0, 0, 0);
+            search.setText(goalSearch);
+            searchBox.addView(search, new LinearLayout.LayoutParams(0, dp(52), 1f));
+            LinearLayout.LayoutParams searchLp = new LinearLayout.LayoutParams(-1, dp(52));
+            searchLp.bottomMargin = dp(14);
+            p.content.addView(searchBox, searchLp);
+
+            HorizontalScrollView chipScroll = new HorizontalScrollView(this);
+            chipScroll.setHorizontalScrollBarEnabled(false);
+            LinearLayout filters = new LinearLayout(this);
+            filters.setOrientation(LinearLayout.HORIZONTAL);
+            for (String option : new String[]{"All", "Active", "Behind", "Completed"}) {
+                TextView chip = makeChip(option, goalFilter.equals(option));
+                LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(-2, dp(38));
+                lp.rightMargin = dp(8);
+                filters.addView(chip, lp);
+                chip.setOnClickListener(v -> { goalFilter = option; showGoals(); });
+            }
+            chipScroll.addView(filters);
+            LinearLayout.LayoutParams chipLp = new LinearLayout.LayoutParams(-1, dp(42));
+            chipLp.bottomMargin = dp(14);
+            p.content.addView(chipScroll, chipLp);
+
+            search.addTextChangedListener(new TextWatcher() {
+                public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
+                public void onTextChanged(CharSequence s, int start, int before, int count) {
+                    goalSearch = s.toString();
+                    renderGoalList(list);
+                }
+                public void afterTextChanged(Editable s) {}
+            });
+        }
+        p.content.addView(list, new LinearLayout.LayoutParams(-1, -2));
+        renderGoalList(list);
+
+        // Floating add button +
+
+        p.content.addView(new View( this), new LinearLayout.LayoutParams(1, dp(72)));
+
+        FrameLayout fab = new FrameLayout(this);
+        GradientDrawable fabBg = new GradientDrawable(GradientDrawable.Orientation.TL_BR,
+                new int[]{PURPLE, Color.rgb(59, 130, 246)});
+        fabBg.setShape(GradientDrawable.OVAL);
+        fab.setBackground(fabBg);
+        fab.setElevation(dp(6));
+        fab.setContentDescription("Add goal");
+        ImageView plus = new ImageView(this);
+        plus.setImageDrawable(new Icon("plus", WHITE));
+        plus.setPadding(dp(16), dp(16), dp(16), dp(16));
+        fab.addView(plus, new FrameLayout.LayoutParams(-1, -1));
+        FrameLayout.LayoutParams fabLp = new FrameLayout.LayoutParams(dp(56), dp(56), Gravity.BOTTOM | Gravity.END);
+        fabLp.rightMargin = dp(20);
+        fabLp.bottomMargin = dp(20);
+        p.root.addView(fab, fabLp);
+        fab.setOnClickListener(v -> showGoalForm(null));
+
+        showPage(p.root, false);
+    }
+
+
+    // Does this goal match the search text and the chosen filter chip?
+    private boolean goalMatches(Goal g) {
+        String q = goalSearch.trim().toLowerCase(Locale.ROOT);
+        if (!q.isEmpty() && !g.title.toLowerCase(Locale.ROOT).contains(q)
+                && !g.course.toLowerCase(Locale.ROOT).contains(q)) {
+            return false;
+        }
+        boolean behind = "Behind".equals(g.status) || "Missed".equals(g.status);
+        switch (goalFilter) {
+            case "Active": return !g.completed;
+            case "Behind": return !g.completed && behind;
+            case "Completed": return g.completed;
+            default: return true;
+        }
+    }
+
+    // The goal cards: active ones first, then the completed ones.
+    private void renderGoalList(LinearLayout list) {
+        list.removeAllViews();
+        ArrayList<Goal> active = new ArrayList<>();
+        ArrayList<Goal> done = new ArrayList<>();
+        for (Goal g : goals) {
+            if (!goalMatches(g)) continue;
+            if (g.completed) done.add(g); else active.add(g);
+        }
+
+        if (!goals.isEmpty() && active.isEmpty() && done.isEmpty()) {
+            LinearLayout none = cardIn(list);
+            addText(none, "No goals match", DEEP_NAVY, 16, true);
+            addText(none, "Try other words, or another filter.", MUTED, 14, false);
+        }
+
         for (Goal g : active) {
-            LinearLayout c = card(p);
+            LinearLayout c = cardIn(list);
             LinearLayout top = new LinearLayout(this);
             top.setOrientation(LinearLayout.HORIZONTAL);
             top.setPadding(0, 0, 0, dp(6));
@@ -906,8 +1024,8 @@ public class MainActivity extends BaseActivity {
             LinearLayout.LayoutParams dLp = new LinearLayout.LayoutParams(-1, dp(1));
             dLp.topMargin = dp(6);
             dLp.bottomMargin = dp(14);
-            p.content.addView(divider, dLp);
-            addHeading(p.content, "Completed Goals");
+            list.addView(divider, dLp);
+            addHeading(list, "Completed Goals");
 
             for (Goal g : done) {
                 LinearLayout row = new LinearLayout(this);
@@ -935,33 +1053,10 @@ public class MainActivity extends BaseActivity {
 
                 LinearLayout.LayoutParams rowLp = new LinearLayout.LayoutParams(-1, -2);
                 rowLp.bottomMargin = dp(10);
-                p.content.addView(row, rowLp);
+                list.addView(row, rowLp);
                 row.setOnClickListener(v -> showGoalOptions(g));
             }
         }
-
-        // Floating add button +
-
-        p.content.addView(new View( this), new LinearLayout.LayoutParams(1, dp(72)));
-
-        FrameLayout fab = new FrameLayout(this);
-        GradientDrawable fabBg = new GradientDrawable(GradientDrawable.Orientation.TL_BR,
-                new int[]{PURPLE, Color.rgb(59, 130, 246)});
-        fabBg.setShape(GradientDrawable.OVAL);
-        fab.setBackground(fabBg);
-        fab.setElevation(dp(6));
-        fab.setContentDescription("Add goal");
-        ImageView plus = new ImageView(this);
-        plus.setImageDrawable(new Icon("plus", WHITE));
-        plus.setPadding(dp(16), dp(16), dp(16), dp(16));
-        fab.addView(plus, new FrameLayout.LayoutParams(-1, -1));
-        FrameLayout.LayoutParams fabLp = new FrameLayout.LayoutParams(dp(56), dp(56), Gravity.BOTTOM | Gravity.END);
-        fabLp.rightMargin = dp(20);
-        fabLp.bottomMargin = dp(20);
-        p.root.addView(fab, fabLp);
-        fab.setOnClickListener(v -> showGoalForm(null));
-
-        showPage(p.root, false);
     }
 
     private EditText field(String hint) {
@@ -1344,6 +1439,37 @@ public class MainActivity extends BaseActivity {
             }
             addButton(numbers, "Achievements and badges", false, v -> openScreen(AchievementsActivity.class));
             addButton(numbers, "Momentum Map", true, v -> openScreen(MomentumMapActivity.class));
+
+
+            // All-time points on each of the last 14 days with a sync, as a line chart
+            LinearLayout chart = card(p);
+            addText(chart, "Points over time", DEEP_NAVY, 16, true);
+            List<ProgressSnapshot> recent = progress.subList(Math.max(0, progress.size() - 14), progress.size());
+            if (recent.size() < 2) {
+                addText(chart, "Your chart fills in as you learn. Each day your progress is synced from "
+                        + "LearnTech adds a point to it.", MUTED, 13, false);
+            } else {
+                int[] points = new int[recent.size()];
+                for (int i = 0; i < points.length; i++) {
+                    points[i] = recent.get(i).totalPoints;
+                }
+                LinearLayout.LayoutParams chartLp = new LinearLayout.LayoutParams(-1, dp(140));
+                chartLp.topMargin = dp(8);
+                chart.addView(new PointsChart(this, points), chartLp);
+
+                LinearLayout dates = new LinearLayout(this);
+                dates.setOrientation(LinearLayout.HORIZONTAL);
+                dates.addView(text(shortDay(recent.get(0).day), MUTED, 11, false),
+                        new LinearLayout.LayoutParams(0, -2, 1f));
+                TextView last = text(shortDay(recent.get(recent.size() - 1).day), MUTED, 11, false);
+                last.setGravity(Gravity.END);
+                dates.addView(last, new LinearLayout.LayoutParams(0, -2, 1f));
+                chart.addView(dates, new LinearLayout.LayoutParams(-1, -2));
+
+                ProgressSnapshot latest = recent.get(recent.size() - 1);
+                addText(chart, latest.coursesCompleted + " courses completed, "
+                        + latest.totalMinutes + " minutes learned", MUTED, 12, false);
+            }
         } else {
             addText(c, "Sign in or create an account to access your learning profile.", MUTED, 14, false);
             addButton(c, "Log in", false, v -> startActivity(new Intent(this, LoginActivity.class)));
@@ -1391,6 +1517,7 @@ public class MainActivity extends BaseActivity {
         goals.clear();
         leaderboard.clear();
         catalogue.clear();
+        progress.clear();
         showStudentTab("Profile");
     }
 
@@ -1435,9 +1562,35 @@ public class MainActivity extends BaseActivity {
                 if ("main".equals(currentScreen)) {
                     showStudentTab(currentTab);
                 }
+
+
+                // Keeps the saved active days up to date, for the streak reminder
+                profileService.getActiveDays(new ApiCallback<List<String>>() {
+                    @Override public void onSuccess(List<String> days) { }
+                    @Override public void onError(String error) { }
+                });
+
+                // Points over time, for the chart on the Profile tab
+                profileService.getProgress(new ApiCallback<List<ProgressSnapshot>>() {
+                    @Override public void onSuccess(List<ProgressSnapshot> result) {
+                        progress.clear();
+                        progress.addAll(result);
+                        if ("main".equals(currentScreen) && "Profile".equals(currentTab)) {
+                            showStudentTab(currentTab);
+                        }
+                    }
+                    @Override public void onError(String error) { }
+                });
             }
             @Override public void onError(String error) {
                 // Leaves the linked note out
+
+
+                // The saved login ran out: back to logged out, with the reason
+                if (!Session.isLoggedIn() && loadedUserId != -1) {
+                    logout();
+                    Toast.makeText(MainActivity.this, error, Toast.LENGTH_LONG).show();
+                }
             }
         });
     }
@@ -1755,6 +1908,84 @@ public class MainActivity extends BaseActivity {
                 canvas.drawArc(r, 0, 360f * progress, false, arc);
                 canvas.restore();
             }
+        }
+    }
+
+    // "2026-10-22" as "22 Oct", for under the chart.
+    private String shortDay(String day) {
+        try {
+            Date date = new SimpleDateFormat("yyyy-MM-dd", Locale.ROOT).parse(day);
+            return new SimpleDateFormat("d MMM", Locale.getDefault()).format(date);
+        } catch (Exception e) {
+            return day;
+        }
+    }
+
+    // A line chart of points, one dot per day, with the area under it shaded.
+    // The lowest value sits at the bottom and the highest at the top.
+    private static class PointsChart extends View {
+        private final int[] values;
+        private final Paint line = new Paint(Paint.ANTI_ALIAS_FLAG);
+        private final Paint fill = new Paint(Paint.ANTI_ALIAS_FLAG);
+        private final Paint dot = new Paint(Paint.ANTI_ALIAS_FLAG);
+        private final Paint label = new Paint(Paint.ANTI_ALIAS_FLAG);
+        private final float density;
+
+        PointsChart(Context context, int[] values) {
+            super(context);
+            this.values = values;
+            density = context.getResources().getDisplayMetrics().density;
+            line.setStyle(Paint.Style.STROKE);
+            line.setStrokeWidth(3 * density);
+            line.setStrokeJoin(Paint.Join.ROUND);
+            line.setColor(PURPLE);
+            fill.setStyle(Paint.Style.FILL);
+            fill.setColor(Color.argb(40, 118, 102, 232));
+            dot.setColor(TEAL);
+            label.setColor(MUTED);
+            label.setTextSize(11 * density);
+        }
+
+        @Override protected void onDraw(Canvas canvas) {
+            int min = values[0], max = values[0];
+            for (int v : values) {
+                min = Math.min(min, v);
+                max = Math.max(max, v);
+            }
+            float pad = 8 * density;
+            float top = 18 * density;           // room for the highest value's label
+            float w = getWidth() - 2 * pad;
+            float h = getHeight() - top - pad;
+            float range = Math.max(1, max - min);
+
+            Path path = new Path();
+            Path area = new Path();
+            float[] xs = new float[values.length];
+            float[] ys = new float[values.length];
+            for (int i = 0; i < values.length; i++) {
+                xs[i] = pad + w * i / (values.length - 1);
+                ys[i] = top + h - h * (values[i] - min) / range;
+                if (i == 0) {
+                    path.moveTo(xs[i], ys[i]);
+                    area.moveTo(xs[i], top + h);
+                }
+                else path.lineTo(xs[i], ys[i]);
+                area.lineTo(xs[i], ys[i]);
+            }
+            area.lineTo(xs[values.length - 1], top + h);
+            area.close();
+
+            canvas.drawPath(area, fill);
+            canvas.drawPath(path, line);
+            for (int i = 0; i < values.length; i++) {
+                canvas.drawCircle(xs[i], ys[i], 4 * density, dot);
+            }
+
+            // The newest total, above its dot
+            String latest = values[values.length - 1] + " XP";
+            float textX = Math.min(xs[values.length - 1] - label.measureText(latest) / 2,
+                    getWidth() - label.measureText(latest));
+            canvas.drawText(latest, Math.max(0, textX), ys[values.length - 1] - 8 * density, label);
         }
     }
 

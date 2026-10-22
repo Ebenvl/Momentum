@@ -13,6 +13,7 @@ import com.example.momentum.model.Enrolment;
 import com.example.momentum.model.Goal;
 import com.example.momentum.model.LeaderboardEntry;
 import com.example.momentum.model.PlatformSettings;
+import com.example.momentum.model.ProgressSnapshot;
 import com.example.momentum.model.StudySession;
 import com.example.momentum.model.User;
 
@@ -20,6 +21,7 @@ import org.json.JSONArray;
 import org.json.JSONObject;
 
 import java.io.BufferedReader;
+import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.OutputStream;
@@ -194,6 +196,7 @@ public class RealMomentumApi implements MomentumApi {
                 badge.id = row.getInt("badgeId");
                 badge.name = row.getString("name");
                 badge.description = optString(row, "description");
+                badge.imageUrl = optString(row, "imageUrl");
                 badge.pointsAwarded = row.optInt("pointsAwarded");
                 badge.awardedAt = optString(row, "awardedAt");
                 badge.isHidden = row.optBoolean("isHidden");
@@ -331,6 +334,25 @@ public class RealMomentumApi implements MomentumApi {
     @Override
     public void getActiveDays(ApiCallback<List<String>> callback) {
         run(callback, () -> names(new JSONArray(send("GET", "/me/active-days", null))));
+    }
+
+    @Override
+    public void getProgress(ApiCallback<List<ProgressSnapshot>> callback) {
+        run(callback, () -> {
+            JSONArray rows = new JSONArray(send("GET", "/me/progress", null));
+            List<ProgressSnapshot> snapshots = new ArrayList<>();
+            for (int i = 0; i < rows.length(); i++) {
+                JSONObject row = rows.getJSONObject(i);
+                ProgressSnapshot snapshot = new ProgressSnapshot();
+                // "2026-10-22 18:00:00" becomes "2026-10-22"
+                snapshot.day = row.getString("snapshotAt").substring(0, 10);
+                snapshot.totalPoints = row.optInt("totalPoints");
+                snapshot.coursesCompleted = row.optInt("coursesCompleted");
+                snapshot.totalMinutes = row.optInt("totalMinutes");
+                snapshots.add(snapshot);
+            }
+            return snapshots;
+        });
     }
 
     @Override
@@ -591,6 +613,7 @@ public class RealMomentumApi implements MomentumApi {
                 badge.id = row.getInt("badgeId");
                 badge.name = row.getString("name");
                 badge.description = optString(row, "description");
+                badge.imageUrl = optString(row, "imageUrl");
                 badge.ruleType = optString(row, "ruleType");
                 badge.ruleValue = row.optInt("ruleValue");
                 badge.pointsAwarded = row.optInt("pointsAwarded");
@@ -607,6 +630,7 @@ public class RealMomentumApi implements MomentumApi {
             JSONObject body = new JSONObject();
             body.put("name", badge.name);
             body.put("description", badge.description != null ? badge.description : JSONObject.NULL);
+            body.put("imageUrl", badge.imageUrl != null ? badge.imageUrl : JSONObject.NULL);
             body.put("ruleType", badge.ruleType);
             body.put("ruleValue", badge.ruleValue);
             body.put("pointsAwarded", badge.pointsAwarded);
@@ -683,15 +707,39 @@ public class RealMomentumApi implements MomentumApi {
             } catch (ApiException e) {
                 mainThread.post(() -> callback.onError(e.getMessage()));
             } catch (Exception e) {
-                mainThread.post(() -> callback.onError("Can't reach the server. Check your connection and try again."));
+                mainThread.post(() -> callback.onError("Can't reach the server. Saved data can still be viewed, "
+                        + "but changes need a connection. Check it and try again."));
             }
         });
+    }
+
+    // Sends a request and gives back the reply as text, like request() below.
+    // For the learner's own data (every GET outside /admin), it also keeps a
+    // copy of the reply. If the backend can't be reached, it gives back that
+    // copy instead, so the screens still show the data as it was last synced.
+    // Changes (POST, PUT, DELETE) still need a connection.
+    private String send(String method, String path, JSONObject body) throws Exception {
+        boolean keepsCopy = "GET".equals(method) && !path.startsWith("/admin");
+        String text;
+        try {
+            text = request(method, path, body);
+        } catch (IOException noConnection) {
+            String copy = keepsCopy ? OfflineStore.loadCopy(path) : null;
+            if (copy == null) {
+                throw noConnection;
+            }
+            return copy;
+        }
+        if (keepsCopy) {
+            OfflineStore.saveCopy(path, text);
+        }
+        return text;
     }
 
     // Sends a request to the backend and gives back the reply as text.
     // Sends the login token too, if someone is logged in.
     // If the backend replies with an error, throws ApiException with its message.
-    private String send(String method, String path, JSONObject body) throws Exception {
+    private String request(String method, String path, JSONObject body) throws Exception {
         HttpURLConnection connection = (HttpURLConnection) new URL(BASE_URL + path).openConnection();
         try {
             connection.setRequestMethod(method);
@@ -714,6 +762,13 @@ public class RealMomentumApi implements MomentumApi {
             int status = connection.getResponseCode();
             InputStream stream = status < 400 ? connection.getInputStream() : connection.getErrorStream();
             String text = readAll(stream);
+
+            // 401 while logged in: the saved login ran out after 7 days, or the
+            // account was suspended. Forget it, so the app asks to log in again.
+            if (status == 401 && Session.isLoggedIn() && !path.startsWith("/login")) {
+                Session.logout();
+                throw new ApiException("Your login ran out. Please log in again.");
+            }
 
             if (status >= 400) {
                 String message = "something went wrong, try again";

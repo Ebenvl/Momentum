@@ -24,6 +24,10 @@ public class BadgeManagement extends AdminScreen {
     private static final String[] RULE_NAMES = {"Complete a number of courses",
             "Reach a streak of a number of days", "Earn a number of points in total"};
 
+    // The pictures a badge can have. The picture itself is saved in the badge's
+    // image_url, so the app can show it without downloading anything.
+    public static final String[] PICTURES = {"🏅", "🏆", "⭐", "🔥", "🚀", "🎯", "📚", "🧠", "💎", "👑"};
+
     private final AdminService adminService = new AdminService();
 
     @Override
@@ -63,7 +67,8 @@ public class BadgeManagement extends AdminScreen {
     // One badge card: name, rule, points, and whether it can be earned right now.
     private void showBadge(Badge badge) {
         LinearLayout box = card();
-        box.addView(text(badge.name + (badge.isActive ? "" : "  (turned off)"), 15, NAVY, true));
+        String picture = badge.imageUrl != null ? badge.imageUrl + "  " : "";
+        box.addView(text(picture + badge.name + (badge.isActive ? "" : "  (turned off)"), 15, NAVY, true));
         box.addView(text(ruleText(badge) + "  •  +" + badge.pointsAwarded + " XP", 13, MUTED, false));
         if (badge.description != null && !badge.description.isEmpty()) {
             box.addView(text(badge.description, 13, MUTED, false));
@@ -98,6 +103,11 @@ public class BadgeManagement extends AdminScreen {
     private void showBadgeForm(Badge existing) {
         EditText name = field("Badge name", existing != null ? existing.name : null, false);
         EditText description = field("Description (optional)", existing != null ? existing.description : null, false);
+        Spinner picture = new Spinner(this);
+        picture.setAdapter(new ArrayAdapter<>(this, android.R.layout.simple_spinner_dropdown_item, PICTURES));
+        if (existing != null && existing.imageUrl != null) {
+            picture.setSelection(Math.max(0, Arrays.asList(PICTURES).indexOf(existing.imageUrl)));
+        }
         Spinner rule = new Spinner(this);
         rule.setAdapter(new ArrayAdapter<>(this, android.R.layout.simple_spinner_dropdown_item, RULE_NAMES));
         EditText target = field("Number to reach", existing != null ? String.valueOf(existing.ruleValue) : null, true);
@@ -119,11 +129,12 @@ public class BadgeManagement extends AdminScreen {
 
         new AlertDialog.Builder(this)
                 .setTitle(existing == null ? "New badge" : "Edit badge")
-                .setView(form(name, description, rule, target, points, active))
+                .setView(form(name, description, picture, rule, target, points, active))
                 .setPositiveButton("Save", (dialog, which) -> {
                     Badge badge = new Badge();
                     badge.name = name.getText().toString().trim();
                     badge.description = description.getText().toString().trim();
+                    badge.imageUrl = PICTURES[picture.getSelectedItemPosition()];
                     badge.ruleType = secret ? existing.ruleType : RULES[rule.getSelectedItemPosition()];
                     Integer targetValue = secret ? Integer.valueOf(1) : numberFrom(target);
                     Integer pointsValue = numberFrom(points);

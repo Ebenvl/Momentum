@@ -4,6 +4,7 @@ import com.example.momentum.data.Api;
 import com.example.momentum.data.ApiCallback;
 import com.example.momentum.data.MomentumApi;
 import com.example.momentum.model.Badge;
+import com.example.momentum.model.ProgressSnapshot;
 import com.example.momentum.model.User;
 
 import java.util.List;
@@ -44,6 +45,11 @@ public class ProfileService {
     // Every day that counted towards their streak, for the Momentum Map.
     public void getActiveDays(ApiCallback<List<String>> callback) {
         api.getActiveDays(callback);
+    }
+
+    // Their points and courses on each day, for the progress chart.
+    public void getProgress(ApiCallback<List<ProgressSnapshot>> callback) {
+        api.getProgress(callback);
     }
 
     // {found, total} secret badges.

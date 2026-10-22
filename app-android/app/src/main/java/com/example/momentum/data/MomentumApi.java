@@ -10,6 +10,7 @@ import com.example.momentum.model.Enrolment;
 import com.example.momentum.model.Goal;
 import com.example.momentum.model.LeaderboardEntry;
 import com.example.momentum.model.PlatformSettings;
+import com.example.momentum.model.ProgressSnapshot;
 import com.example.momentum.model.StudySession;
 import com.example.momentum.model.User;
 
@@ -54,6 +55,9 @@ public interface MomentumApi {
 
     // Every day that counted towards the streak, like "2026-10-22".
     void getActiveDays(ApiCallback<List<String>> callback);
+
+    // The learner's points and courses on each day, oldest first, for the progress chart.
+    void getProgress(ApiCallback<List<ProgressSnapshot>> callback);
 
     // How many secret badges the learner has found, and how many there are: {found, total}.
     void getSecrets(ApiCallback<int[]> callback);

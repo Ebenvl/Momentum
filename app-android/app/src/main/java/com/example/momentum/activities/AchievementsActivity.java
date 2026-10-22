@@ -119,9 +119,11 @@ public class AchievementsActivity extends BaseActivity {
 
                 // One card per badge, in the same style as the cards above.
                 // Secret badges (easter eggs) get an egg instead of a medal.
+                // A badge with a picture chosen by the admin shows that picture.
                 for (Badge badge : badges) {
                     TextView card = new TextView(AchievementsActivity.this);
-                    String text = (badge.isHidden ? "🥚 Secret: " : "🏅 ") + badge.name
+                    String picture = badge.imageUrl != null ? badge.imageUrl + " " : "🏅 ";
+                    String text = (badge.isHidden ? "🥚 Secret: " : picture) + badge.name
                             + "  +" + badge.pointsAwarded + " XP";
                     if (badge.description != null && !badge.description.isEmpty()) {
                         text += "\n" + badge.description;

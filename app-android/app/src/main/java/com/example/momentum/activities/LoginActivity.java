@@ -96,6 +96,16 @@ public class LoginActivity extends BaseActivity {
                     @Override
                     public void onError(String errorMessage) {
                         setLoading(false);
+
+
+                        // Still logged in means the server couldn't be reached. The
+                        // saved login itself is fine, so fingerprint login stays on.
+                        if (Session.isLoggedIn()) {
+                            Session.logout();
+                            Toast.makeText(LoginActivity.this, errorMessage, Toast.LENGTH_LONG).show();
+                            return;
+                        }
+
                         Session.logout();
                         // Forget the old saved login, so the password login after this
                         // offers to turn fingerprint login on again with a fresh one.

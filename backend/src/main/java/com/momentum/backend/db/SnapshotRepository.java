@@ -40,12 +40,16 @@ public class SnapshotRepository {
     }
 
 
-    // A learner's snapshots, oldest first, for the progress charts.
+    // A learner's snapshots, oldest first, for the progress chart.
+    // The sync saves one every 30 minutes, so only the last one of each day
+    // is given back (the highest snapshot_id that day).
     public List<ProgressSnapshot> findSnapshotsForUser(int userId) throws SQLException {
 
         String sql = "SELECT snapshot_id, user_id, snapshot_at, courses_enrolled, courses_completed, "
                    + "total_minutes, total_points, current_streak "
-                   + "FROM ProgressSnapshots WHERE user_id = ? ORDER BY snapshot_at";
+                   + "FROM ProgressSnapshots WHERE snapshot_id IN ("
+                   + "SELECT MAX(snapshot_id) FROM ProgressSnapshots WHERE user_id = ? "
+                   + "GROUP BY DATE(snapshot_at)) ORDER BY snapshot_at";
 
         List<ProgressSnapshot> snapshots = new ArrayList<>();
 
