@@ -1,7 +1,5 @@
-// ============================================================
 // Build file for the LearnTech Momentum backend.
 // Lists the libraries the backend uses and how to run it.
-// ============================================================
 
 plugins {
     // Lets Gradle build and run a normal Java program with a main method.

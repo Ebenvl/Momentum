@@ -17,10 +17,8 @@ public class LeaderboardController {
         this.pointsRepository = pointsRepository;
     }
 
-    // -----------------------------------------------------
     // GET /leaderboard               this month's points, highest first
     // GET /leaderboard?period=all    points from every month
-    // -----------------------------------------------------
     public void getLeaderboard(Context ctx) {
 
         if (CurrentUser.id(ctx) == null) {

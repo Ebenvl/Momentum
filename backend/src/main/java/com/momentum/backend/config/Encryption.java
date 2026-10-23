@@ -8,14 +8,9 @@ import javax.crypto.Cipher;
 import javax.crypto.spec.GCMParameterSpec;
 import javax.crypto.spec.SecretKeySpec;
 
-// Encrypts the LearnTech API key and secret before they are saved in the
-// database, and decrypts them again when the backend needs them.
-//
-// Uses AES-GCM, a standard encryption method. The encryption key is made from
-// jwt.secret in config.properties, so someone who only has a copy of the
-// database can't read the API key.
-// If jwt.secret is ever changed, saved settings can't be decrypted any more
-// and the admin has to enter them again.
+// Encrypts the LearnTech API key before it's saved in the database (AES-GCM,
+// with a key made from jwt.secret), so a copy of the database alone can't
+// reveal it. A new jwt.secret means the admin enters the key again.
 public class Encryption {
 
     private final SecretKeySpec key;

@@ -11,12 +11,8 @@ import java.util.Arrays;
 import java.util.Comparator;
 import java.util.concurrent.TimeUnit;
 
-// Backs up the whole database once a day with mysqldump, MySQL's own backup tool.
-// Each backup is one .sql file in backend/backups, named by date, and the
-// last 7 are kept. backups/ is in .gitignore, so they never go to GitHub.
-//
-// To restore one, in MySQL Workbench as root: File, Open SQL Script, pick the
-// file, and run it. It recreates every table with its data.
+// Backs up the database once a day with mysqldump, into backend/backups (not on
+// GitHub), keeping the last 7. To restore, run the .sql file in Workbench as root.
 public class BackupService {
 
     private static final Path FOLDER = Path.of("backups");

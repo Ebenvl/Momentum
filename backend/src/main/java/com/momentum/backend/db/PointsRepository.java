@@ -18,14 +18,9 @@ public class PointsRepository {
         this.database = database;
     }
 
-    // Records a points award. INSERT IGNORE skips it quietly if the same award
-    // already exists (unique key on user_id + reference_id + reason), so a
-    // repeated sync can never award the same completion twice.
-    // Gives back true only if the points are new.
-    //
-    // reason is for example "course_completed" or "badge_awarded", and
-    // referenceId is the course_id or badge_id it was for.
-    // monthKey is the month it counts towards, like "2026-10" (leaderboard).
+    // Records a points award, or skips it if the same one exists already (INSERT
+    // IGNORE on user + reference + reason), so a repeated sync never pays twice.
+    // Gives back true only if the points are new. monthKey is like "2026-10".
     public boolean awardPoints(int userId, int points, String reason, Integer referenceId,
                                String monthKey) throws SQLException {
 

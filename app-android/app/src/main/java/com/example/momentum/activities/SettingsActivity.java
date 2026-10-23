@@ -100,9 +100,7 @@ public class SettingsActivity extends BaseActivity {
         addAppearanceSection();
     }
 
-    // -----------------------------------------------------
     // Account: who they are, and changing their name
-    // -----------------------------------------------------
     private void addAccountSection() {
         User user = Session.getUser();
         LinearLayout card = section("Account");
@@ -134,9 +132,7 @@ public class SettingsActivity extends BaseActivity {
         }));
     }
 
-    // -----------------------------------------------------
     // Password: the current one has to be right first
-    // -----------------------------------------------------
     private void addPasswordSection() {
         LinearLayout card = section("Change password");
         EditText current = input("Current password", true);
@@ -173,9 +169,7 @@ public class SettingsActivity extends BaseActivity {
         }));
     }
 
-    // -----------------------------------------------------
     // Two-step login: after the password, a code emailed to them
-    // -----------------------------------------------------
     private void addTwoStepSection() {
         LinearLayout card = section("Two-step login");
         TextView status = label("Checking...");
@@ -264,9 +258,7 @@ public class SettingsActivity extends BaseActivity {
         return form;
     }
 
-    // -----------------------------------------------------
     // Fingerprint login: turn it on or off for this phone
-    // -----------------------------------------------------
     private void addFingerprintSection() {
         if (!BiometricLogin.isAvailable(this)) {
             return;   // this phone has no fingerprint or face sensor set up
@@ -299,18 +291,14 @@ public class SettingsActivity extends BaseActivity {
         }));
     }
 
-    // -----------------------------------------------------
     // Reminders: the daily study reminder, on this phone
-    // -----------------------------------------------------
     private void addRemindersSection() {
         LinearLayout card = section("Reminders");
         card.addView(label("A daily reminder on this phone, at a time you choose."));
         card.addView(button("Set up reminders", () -> startActivity(new Intent(this, RemindersActivity.class))));
     }
 
-    // -----------------------------------------------------
     // Appearance: dark mode and text size, saved on this phone
-    // -----------------------------------------------------
     private void addAppearanceSection() {
         LinearLayout card = section("Appearance");
 
@@ -347,9 +335,7 @@ public class SettingsActivity extends BaseActivity {
         card.addView(label("This adds to your phone's own text size setting."));
     }
 
-    // -----------------------------------------------------
     // Building blocks, in the same style as the other extra screens
-    // -----------------------------------------------------
 
     // A white card with a heading, added to the page.
     private LinearLayout section(String title) {

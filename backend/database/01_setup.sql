@@ -1,12 +1,5 @@
--- ============================================================
--- LearnTech Momentum: database and app user setup
--- Run this ONCE, logged in as root in MySQL Workbench.
---
--- Before running, replace CHANGE_ME with a real password for the
--- app user. Do NOT save this file with the real password in it,
--- because this file is committed to GitHub. Type it in Workbench,
--- run it, and undo the change before saving.
--- ============================================================
+-- LearnTech Momentum: the database and the app's user. Run once as root.
+-- Replace CHANGE_ME with a password first, and don't save it in this file.
 
 -- The database that holds everything for the app.
 -- utf8mb4 so names and text with any characters store correctly.

@@ -49,13 +49,8 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 
-/**
- * Starting point of the LearnTech Momentum backend.
- *
- * Starts the web server, connects to the database, and sets up the
- * endpoints the Android app calls. Each endpoint points to a method in
- * a controller class, for example AuthController for register and login.
- */
+// Starts the backend: the database, the web server, and the routes the app
+// calls, each handled by a controller like AuthController.
 public class App {
 
     public static void main(String[] args) {
@@ -134,19 +129,15 @@ public class App {
         Javalin app = Javalin.create(javalinConfig -> {
             javalinConfig.jetty.port = port;
 
-            // -----------------------------------------------------
             // Health checks
             // Quick ways to confirm the backend is running.
             // Open these in a browser to test.
-            // -----------------------------------------------------
 
             // Is the backend itself running?
             javalinConfig.routes.get("/health", ctx -> ctx.json(Map.of("status", "ok")));
 
-            // Can the backend reach the database?
-            // If this fails, first check MySQL is running: Get-Service MySQL80
-            // Admins only, now that the backend is online: anyone else could keep
-            // making it open database connections.
+            // Can the backend reach the database? Admins only, so nobody else can
+            // keep making it open connections.
             javalinConfig.routes.get("/health/db", ctx -> {
                 if (!CurrentUser.isAdmin(ctx)) {
                     ctx.status(403).json(Map.of("error", "administrators only"));
@@ -179,10 +170,8 @@ public class App {
                 }
             });
 
-            // -----------------------------------------------------
             // Register and login (see auth/AuthController.java)
             // Open to everyone, no token needed.
-            // -----------------------------------------------------
             javalinConfig.routes.post("/register", authController::register);
             javalinConfig.routes.post("/login", authController::login);
             javalinConfig.routes.post("/login/verify", authController::verifyLogin);
@@ -208,9 +197,7 @@ public class App {
                 }
             });
 
-            // -----------------------------------------------------
             // Profile (see profile/ProfileController.java)
-            // -----------------------------------------------------
             javalinConfig.routes.get("/me", profileController::getMe);
             javalinConfig.routes.put("/me", profileController::updateMe);
             javalinConfig.routes.put("/me/password", profileController::changePassword);
@@ -223,23 +210,17 @@ public class App {
             javalinConfig.routes.get("/me/active-days", profileController::getActiveDays);
             javalinConfig.routes.get("/me/secrets", profileController::getSecrets);
 
-            // -----------------------------------------------------
             // Courses (see courses/CourseController.java)
-            // -----------------------------------------------------
             javalinConfig.routes.get("/courses", courseController::getCatalogue);
             javalinConfig.routes.get("/me/courses", courseController::getMyCourses);
 
-            // -----------------------------------------------------
             // Study timetable (see sessions/StudySessionController.java)
-            // -----------------------------------------------------
             javalinConfig.routes.get("/study-sessions", studySessionController::getAll);
             javalinConfig.routes.post("/study-sessions", studySessionController::create);
             javalinConfig.routes.put("/study-sessions/{id}", studySessionController::update);
             javalinConfig.routes.delete("/study-sessions/{id}", studySessionController::delete);
 
-            // -----------------------------------------------------
             // Goals and check-ins (see goals/GoalController.java)
-            // -----------------------------------------------------
             javalinConfig.routes.get("/goals", goalController::getAll);
             javalinConfig.routes.post("/goals", goalController::create);
             javalinConfig.routes.get("/goals/{id}", goalController::getOne);
@@ -249,14 +230,10 @@ public class App {
             javalinConfig.routes.get("/goals/{id}/checkins", goalController::getCheckIns);
             javalinConfig.routes.post("/goals/{id}/checkins", goalController::checkIn);
 
-            // -----------------------------------------------------
             // Leaderboard (see leaderboard/LeaderboardController.java)
-            // -----------------------------------------------------
             javalinConfig.routes.get("/leaderboard", leaderboardController::getLeaderboard);
 
-            // -----------------------------------------------------
             // Admin (see admin/AdminController.java)
-            // -----------------------------------------------------
             javalinConfig.routes.get("/admin/stats", adminController::getStats);
             javalinConfig.routes.get("/admin/course-stats", adminController::getCourseStats);
             javalinConfig.routes.get("/admin/users", adminController::getUsers);
@@ -306,10 +283,8 @@ public class App {
         });
         scheduler.scheduleAtFixedRate(syncService::syncAll, 0, SYNC_EVERY_MINUTES, TimeUnit.MINUTES);
 
-        // Back up the database once a day. It checks every hour, and only backs up
-        // if there is no backup for today yet, so a restart doesn't make extra ones.
-        // Turned off on a hosting service (backup.enabled=false), where the database
-        // service makes its own backups and there's no mysqldump.
+        // Daily backup, checked every hour. Off when hosted (backup.enabled=false),
+        // where the database service makes its own.
         if (!"false".equalsIgnoreCase(config.getOptional("backup.enabled"))) {
             BackupService backupService = new BackupService(config, activityLogRepository);
             scheduler.scheduleAtFixedRate(backupService::backupIfDue, 1, 60, TimeUnit.MINUTES);

@@ -46,9 +46,7 @@ public class GoalController {
         this.easterEggService = easterEggService;
     }
 
-    // -----------------------------------------------------
     // POST /goals
-    // -----------------------------------------------------
     public void create(Context ctx) {
 
         Integer userId = CurrentUser.id(ctx);
@@ -93,9 +91,7 @@ public class GoalController {
         }
     }
 
-    // -----------------------------------------------------
     // GET /goals   all of the learner's goals, newest first
-    // -----------------------------------------------------
     public void getAll(Context ctx) {
 
         Integer userId = CurrentUser.id(ctx);
@@ -111,9 +107,7 @@ public class GoalController {
         }
     }
 
-    // -----------------------------------------------------
     // GET /goals/{id}
-    // -----------------------------------------------------
     public void getOne(Context ctx) {
 
         Integer userId = CurrentUser.id(ctx);
@@ -139,9 +133,7 @@ public class GoalController {
         }
     }
 
-    // -----------------------------------------------------
     // PUT /goals/{id}
-    // -----------------------------------------------------
     public void update(Context ctx) {
 
         Integer userId = CurrentUser.id(ctx);
@@ -190,12 +182,10 @@ public class GoalController {
         }
     }
 
-    // -----------------------------------------------------
     // PUT /goals/{id}/status
     // A learner can cancel a goal, or reopen it. They can only mark a goal
     // completed themselves if it is free text, because every other type is
     // checked by the system from their LearnTech progress.
-    // -----------------------------------------------------
     public void updateStatus(Context ctx) {
 
         Integer userId = CurrentUser.id(ctx);
@@ -241,9 +231,7 @@ public class GoalController {
         }
     }
 
-    // -----------------------------------------------------
     // DELETE /goals/{id}
-    // -----------------------------------------------------
     public void delete(Context ctx) {
 
         Integer userId = CurrentUser.id(ctx);
@@ -269,9 +257,7 @@ public class GoalController {
         }
     }
 
-    // -----------------------------------------------------
     // POST /goals/{id}/checkins
-    // -----------------------------------------------------
     public void checkIn(Context ctx) {
 
         Integer userId = CurrentUser.id(ctx);
@@ -329,9 +315,7 @@ public class GoalController {
         }
     }
 
-    // -----------------------------------------------------
     // GET /goals/{id}/checkins   the check-ins on one goal, newest first
-    // -----------------------------------------------------
     public void getCheckIns(Context ctx) {
 
         Integer userId = CurrentUser.id(ctx);
@@ -356,9 +340,7 @@ public class GoalController {
         }
     }
 
-    // -----------------------------------------------------
     // Helpers
-    // -----------------------------------------------------
 
     // Checks a goal the app sent. Gives back what is wrong, or null if it's fine.
     private String checkGoal(GoalRequest request) {

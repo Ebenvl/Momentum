@@ -1,8 +1,6 @@
--- ============================================================
 -- Adds the StudySessions table to a database that already exists,
 -- without deleting anything. Run this once in MySQL Workbench as root.
 -- (02_schema.sql already includes it for a fresh database.)
--- ============================================================
 
 USE momentum;
 

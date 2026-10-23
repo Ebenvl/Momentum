@@ -13,10 +13,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
 
-// Easter eggs: hidden badges for exploring the app, each with XP.
-// Learners only see them once found. They're rows in the Badges table with
-// is_hidden on and a rule type starting with "secret_" (see 05_extras.sql).
-//
+// Easter eggs: hidden badges (is_hidden, rule type "secret_...") for exploring the app.
 //   Curious Mind               tap the logo on Home 7 times
 //   Master Planner             on one day: open the study timetable, talk to a coach, log a check-in
 //   Night Owl                  log a check-in between midnight and 4 am

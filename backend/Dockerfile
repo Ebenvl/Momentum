@@ -1,11 +1,6 @@
-# Builds and runs the Momentum backend on a hosting service, such as Render.
-#
-# Step 1 builds it with the full Java 25 kit. Step 2 copies only the finished
-# program into a smaller Java 25 runtime, so the running image has no build
-# tools or source code in it.
-#
-# No settings or passwords are copied in. The hosting service gives them as
-# environment settings (DB_URL, DB_PASSWORD, JWT_SECRET and so on).
+# Builds the backend with the full Java 25 kit, then runs only the finished
+# program on a smaller runtime. Passwords come from the hosting service's
+# environment settings, never from a file.
 
 FROM eclipse-temurin:25-jdk AS build
 WORKDIR /src

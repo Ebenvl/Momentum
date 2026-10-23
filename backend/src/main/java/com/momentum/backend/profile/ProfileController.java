@@ -51,9 +51,7 @@ public class ProfileController {
         this.easterEggService = easterEggService;
     }
 
-    // -----------------------------------------------------
     // GET /me/badges   the badges the learner has earned, newest first
-    // -----------------------------------------------------
     public void getBadges(Context ctx) {
 
         Integer userId = CurrentUser.id(ctx);
@@ -69,9 +67,7 @@ public class ProfileController {
         }
     }
 
-    // -----------------------------------------------------
     // GET /me
-    // -----------------------------------------------------
     public void getMe(Context ctx) {
 
         Integer userId = CurrentUser.id(ctx);
@@ -100,9 +96,7 @@ public class ProfileController {
         }
     }
 
-    // -----------------------------------------------------
     // PUT /me
-    // -----------------------------------------------------
     public void updateMe(Context ctx) {
 
         Integer userId = CurrentUser.id(ctx);
@@ -161,11 +155,9 @@ public class ProfileController {
         }
     }
 
-    // -----------------------------------------------------
     // PUT /me/password   change your own password
     // The current password has to be right, so a phone left logged in
     // can't be used to take over the account.
-    // -----------------------------------------------------
     public void changePassword(Context ctx) {
 
         Integer userId = CurrentUser.id(ctx);
@@ -209,11 +201,9 @@ public class ProfileController {
         }
     }
 
-    // -----------------------------------------------------
     // POST /me/two-factor/start   emails a code to prove the email is theirs
     // POST /me/two-factor/confirm turns two-step login on with that code
     // POST /me/two-factor/disable turns it off, with their password
-    // -----------------------------------------------------
     public void startTwoFactor(Context ctx) {
 
         Integer userId = CurrentUser.id(ctx);
@@ -297,10 +287,8 @@ public class ProfileController {
         }
     }
 
-    // -----------------------------------------------------
     // POST /me/events   something done in the app, for the easter eggs
     // Gives back the names of any secret badges it unlocked.
-    // -----------------------------------------------------
     public void recordEvent(Context ctx) {
 
         Integer userId = CurrentUser.id(ctx);
@@ -324,9 +312,7 @@ public class ProfileController {
         }
     }
 
-    // -----------------------------------------------------
     // GET /me/active-days   every day that counted towards the streak
-    // -----------------------------------------------------
     public void getActiveDays(Context ctx) {
 
         Integer userId = CurrentUser.id(ctx);
@@ -342,9 +328,7 @@ public class ProfileController {
         }
     }
 
-    // -----------------------------------------------------
     // GET /me/secrets   how many secret badges there are, and how many they found
-    // -----------------------------------------------------
     public void getSecrets(Context ctx) {
 
         Integer userId = CurrentUser.id(ctx);
@@ -361,9 +345,7 @@ public class ProfileController {
         }
     }
 
-    // -----------------------------------------------------
     // GET /me/progress   the learner's progress over time, for the charts
-    // -----------------------------------------------------
     public void getProgress(Context ctx) {
 
         Integer userId = CurrentUser.id(ctx);

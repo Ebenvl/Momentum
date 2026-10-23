@@ -5,17 +5,9 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.util.Properties;
 
-/**
- * Loads the backend's settings.
- *
- * On a laptop they come from config.properties in the backend folder, which is
- * ignored by Git. On a hosting service they come from its secret environment
- * settings instead, so no password is ever saved in a file on the server.
- *
- * Each setting can come from either place. The environment name is the same
- * name in capitals with underscores: db.password becomes DB_PASSWORD.
- * config.properties wins if both have it.
- */
+// The backend's settings: from config.properties on a laptop (ignored by Git),
+// or from the hosting service's secret environment settings, where
+// db.password becomes DB_PASSWORD. The file wins if both have it.
 public class Config {
 
     private final Properties properties = new Properties();

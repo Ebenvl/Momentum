@@ -22,17 +22,10 @@ import javax.crypto.KeyGenerator;
 import javax.crypto.SecretKey;
 import javax.crypto.spec.GCMParameterSpec;
 
-// Keeps the app usable without signal.
-//
-// 1. It remembers who is logged in, so the app opens straight to their data.
-//    Only the login token is saved (never the password), encrypted with a key
-//    in the phone's secure key storage, so it can't be read off the phone.
-// 2. It keeps a copy of what the backend last sent for the learner's own
-//    screens: profile, courses, goals, check-ins, badges, timetable and the
-//    leaderboard. When the backend can't be reached, the app shows that copy,
-//    as it was at the last sync.
-//
-// Everything is in the app's private storage. Log out wipes it.
+// Keeps the app usable without signal: remembers who is logged in (only the
+// token, encrypted with the phone's secure key storage), and keeps a copy of
+// the learner's own data to show when the backend can't be reached.
+// Log out wipes both.
 public class OfflineStore {
 
     private static final String KEY_NAME = "momentum_saved_login";
@@ -51,9 +44,7 @@ public class OfflineStore {
     }
 
 
-    // -----------------------------------------------------
     // The saved login
-    // -----------------------------------------------------
 
     // Saves who logged in, with the token encrypted.
     public static void saveLogin(User user, String token) {
@@ -133,9 +124,7 @@ public class OfflineStore {
     }
 
 
-    // -----------------------------------------------------
     // Saved copies of the backend's replies
-    // -----------------------------------------------------
 
     // Saves a reply, for example the text of GET /goals, with the time it came in.
     static void saveCopy(String path, String text) {

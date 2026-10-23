@@ -50,9 +50,7 @@ public class SettingsController {
         }
     }
 
-    // -----------------------------------------------------
     // GET /admin/settings   the current settings, key and secret masked
-    // -----------------------------------------------------
     public void getSettings(Context ctx) {
 
         if (!requireAdmin(ctx)) {
@@ -77,10 +75,8 @@ public class SettingsController {
         }
     }
 
-    // -----------------------------------------------------
     // PUT /admin/settings   save new settings
     // Leave apiKey or apiSecret empty to keep the current one.
-    // -----------------------------------------------------
     public void saveSettings(Context ctx) {
 
         if (!requireAdmin(ctx)) {
@@ -135,9 +131,7 @@ public class SettingsController {
         }
     }
 
-    // -----------------------------------------------------
     // POST /admin/settings/test   try the current settings
-    // -----------------------------------------------------
     public void testConnection(Context ctx) {
 
         if (!requireAdmin(ctx)) {
@@ -162,9 +156,7 @@ public class SettingsController {
         }
     }
 
-    // -----------------------------------------------------
     // Helpers
-    // -----------------------------------------------------
 
     // Shows only the last 4 characters, like "****wO5C".
     private String mask(String value) {

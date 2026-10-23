@@ -2,10 +2,7 @@ package com.example.momentum.data;
 
 import com.example.momentum.model.User;
 
-// Remembers who is logged in while the app is open,
-// and the login token the backend gave them.
-// OfflineStore also saves it on the phone, so the next time the app opens
-// they're still logged in, even without signal.
+// Who is logged in and their token. OfflineStore saves it, so they stay logged in.
 public class Session {
 
     private static User currentUser;

@@ -19,9 +19,7 @@ public class CourseController {
         this.enrolmentRepository = enrolmentRepository;
     }
 
-    // -----------------------------------------------------
     // GET /courses   every course, for picking one when setting a goal
-    // -----------------------------------------------------
     public void getCatalogue(Context ctx) {
 
         if (CurrentUser.id(ctx) == null) {
@@ -36,9 +34,7 @@ public class CourseController {
         }
     }
 
-    // -----------------------------------------------------
     // GET /me/courses   the learner's own courses and their state, from the last sync
-    // -----------------------------------------------------
     public void getMyCourses(Context ctx) {
 
         Integer userId = CurrentUser.id(ctx);

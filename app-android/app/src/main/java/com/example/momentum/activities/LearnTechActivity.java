@@ -13,12 +13,8 @@ import android.widget.Toast;
 
 import androidx.activity.OnBackPressedCallback;
 
-// Shows the LearnTech learning platform inside the app, so learners can do
-// their courses without leaving it.
-//
-// The learner logs into LearnTech here the first time. The login is kept
-// (like a browser remembering you), so after that they go straight in.
-// Our app never sees or stores their LearnTech password.
+// LearnTech inside the app. The learner logs in once and the browser keeps
+// that login. Our app never sees their LearnTech password.
 public class LearnTechActivity extends BaseActivity {
 
     // The page to open, passed in by whoever opens this screen.

@@ -15,12 +15,8 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.Duration;
 
-// Talks to the LearnTech API. Read only, it never changes anything
-// on the platform. Only the backend uses this, the app never sees the key.
-//
-// If learntech.base_url in config.properties is "sample", it reads the sample
-// replies from the API document in backend/sample-data instead, so the sync can
-// be built and tested before the real API address is confirmed.
+// Talks to the LearnTech API, read only. With learntech.base_url set to
+// "sample", it reads the sample replies in backend/sample-data instead.
 public class LearnTechClient {
 
     // Not final, because the admin can change them from the settings screen.

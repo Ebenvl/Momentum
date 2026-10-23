@@ -1,14 +1,6 @@
--- ============================================================
--- Sets up the database on a hosted MySQL service (like Aiven).
--- Run this ONCE, connected as the service's admin user (avnadmin on Aiven).
---
--- Like 01_setup.sql, but the app user can connect from anywhere ('%'),
--- because the backend runs on a different server than the database.
--- It can still only read and change data in the momentum database.
---
--- Before running, replace CHANGE_ME with a long random password.
--- Do NOT save this file with the real password in it.
--- ============================================================
+-- Like 01_setup.sql, for a hosted MySQL (Aiven). Run once as the service's admin.
+-- The app user can connect from anywhere, but only use the momentum data.
+-- Replace CHANGE_ME with a long random password, and don't save it in this file.
 
 CREATE DATABASE IF NOT EXISTS momentum
     CHARACTER SET utf8mb4

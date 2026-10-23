@@ -48,14 +48,10 @@ public class AdminController {
         this.exportRepository = exportRepository;
     }
 
-    // =====================================================
     // Users
-    // =====================================================
 
-    // -----------------------------------------------------
     // POST /admin/users   create an account
     // Same checks as register, plus the role.
-    // -----------------------------------------------------
     public void createUser(Context ctx) {
 
         if (!requireAdmin(ctx)) {
@@ -132,9 +128,7 @@ public class AdminController {
         }
     }
 
-    // -----------------------------------------------------
     // PUT /admin/users/{id}   change name and role
-    // -----------------------------------------------------
     public void updateUser(Context ctx) {
 
         if (!requireAdmin(ctx)) {
@@ -186,9 +180,7 @@ public class AdminController {
         }
     }
 
-    // -----------------------------------------------------
     // PUT /admin/users/{id}/status   suspend or reactivate
-    // -----------------------------------------------------
     public void setUserStatus(Context ctx) {
 
         if (!requireAdmin(ctx)) {
@@ -232,10 +224,8 @@ public class AdminController {
         }
     }
 
-    // -----------------------------------------------------
     // PUT /admin/users/{id}/link   link to a LearnTech learner
     // Send {"idst": null} to unlink.
-    // -----------------------------------------------------
     public void linkUser(Context ctx) {
 
         if (!requireAdmin(ctx)) {
@@ -275,9 +265,7 @@ public class AdminController {
         }
     }
 
-    // -----------------------------------------------------
     // DELETE /admin/users/{id}   remove an account
-    // -----------------------------------------------------
     public void deleteUser(Context ctx) {
 
         if (!requireAdmin(ctx)) {
@@ -307,9 +295,7 @@ public class AdminController {
         }
     }
 
-    // -----------------------------------------------------
     // GET /admin/stats   the numbers on the admin dashboard
-    // -----------------------------------------------------
     public void getStats(Context ctx) {
 
         if (!requireAdmin(ctx)) {
@@ -323,9 +309,7 @@ public class AdminController {
         }
     }
 
-    // -----------------------------------------------------
     // GET /admin/course-stats   enrolled and completed per course
-    // -----------------------------------------------------
     public void getCourseStats(Context ctx) {
 
         if (!requireAdmin(ctx)) {
@@ -339,9 +323,7 @@ public class AdminController {
         }
     }
 
-    // -----------------------------------------------------
     // GET /admin/users   every account
-    // -----------------------------------------------------
     public void getUsers(Context ctx) {
 
         if (!requireAdmin(ctx)) {
@@ -355,9 +337,7 @@ public class AdminController {
         }
     }
 
-    // -----------------------------------------------------
     // GET /admin/users/{id}
-    // -----------------------------------------------------
     public void getUser(Context ctx) {
 
         if (!requireAdmin(ctx)) {
@@ -382,13 +362,9 @@ public class AdminController {
         }
     }
 
-    // =====================================================
     // Courses
-    // =====================================================
 
-    // -----------------------------------------------------
     // GET /admin/courses   the whole course catalogue
-    // -----------------------------------------------------
     public void getCourses(Context ctx) {
 
         if (!requireAdmin(ctx)) {
@@ -402,9 +378,7 @@ public class AdminController {
         }
     }
 
-    // -----------------------------------------------------
     // GET /admin/courses/{id}
-    // -----------------------------------------------------
     public void getCourse(Context ctx) {
 
         if (!requireAdmin(ctx)) {
@@ -428,11 +402,9 @@ public class AdminController {
         }
     }
 
-    // -----------------------------------------------------
     // PUT /admin/courses/{id}
     // Points override and expected duration.
     // Either can be null, which clears it.
-    // -----------------------------------------------------
     public void updateCourse(Context ctx) {
 
         if (!requireAdmin(ctx)) {
@@ -475,13 +447,9 @@ public class AdminController {
         }
     }
 
-    // =====================================================
     // Badges
-    // =====================================================
 
-    // -----------------------------------------------------
     // POST /admin/badges
-    // -----------------------------------------------------
     public void createBadge(Context ctx) {
 
         if (!requireAdmin(ctx)) {
@@ -515,9 +483,7 @@ public class AdminController {
         }
     }
 
-    // -----------------------------------------------------
     // GET /admin/badges   every badge
-    // -----------------------------------------------------
     public void getBadges(Context ctx) {
 
         if (!requireAdmin(ctx)) {
@@ -531,9 +497,7 @@ public class AdminController {
         }
     }
 
-    // -----------------------------------------------------
     // GET /admin/logs   the latest activity and errors
-    // -----------------------------------------------------
     public void getLogs(Context ctx) {
 
         if (!requireAdmin(ctx)) {
@@ -547,9 +511,7 @@ public class AdminController {
         }
     }
 
-    // -----------------------------------------------------
     // GET /admin/badges/{id}
-    // -----------------------------------------------------
     public void getBadge(Context ctx) {
 
         if (!requireAdmin(ctx)) {
@@ -573,9 +535,7 @@ public class AdminController {
         }
     }
 
-    // -----------------------------------------------------
     // PUT /admin/badges/{id}
-    // -----------------------------------------------------
     public void updateBadge(Context ctx) {
 
         if (!requireAdmin(ctx)) {
@@ -614,9 +574,7 @@ public class AdminController {
         }
     }
 
-    // -----------------------------------------------------
     // DELETE /admin/badges/{id}
-    // -----------------------------------------------------
     public void deleteBadge(Context ctx) {
 
         if (!requireAdmin(ctx)) {
@@ -641,14 +599,10 @@ public class AdminController {
         }
     }
 
-    // =====================================================
     // Export
-    // =====================================================
 
-    // -----------------------------------------------------
     // GET /admin/export/{table}   download a table as a CSV file
     // For example /admin/export/users or /admin/export/points
-    // -----------------------------------------------------
     public void exportTable(Context ctx) {
 
         if (!requireAdmin(ctx)) {
@@ -676,9 +630,7 @@ public class AdminController {
         }
     }
 
-    // =====================================================
     // Helpers
-    // =====================================================
 
     // Replies 401 if nobody is logged in, or 403 if they are not an admin.
     // Gives back true only if the request may carry on.

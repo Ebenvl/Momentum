@@ -10,11 +10,8 @@ import java.security.SecureRandom;
 import java.sql.SQLException;
 import java.util.HexFormat;
 
-// Emailed 6-digit codes: makes them, emails them, and checks them.
-//
-// Used for two-step login ("login"), turning two-step login on ("enable"),
-// and resetting a password ("reset"). Each code lasts 10 minutes, works
-// once, and stops working after 5 wrong tries.
+// Emailed 6-digit codes for login, enable and reset. Each lasts 10 minutes,
+// works once, and stops working after 5 wrong tries.
 public class CodeService {
 
     // How sending a code went.

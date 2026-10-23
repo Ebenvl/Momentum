@@ -11,11 +11,8 @@ import jakarta.mail.internet.MimeMessage;
 
 import java.util.Properties;
 
-// Sends emails, through the mail account in config.properties (for example a
-// Gmail account with an app password). Used for two-step login codes and
-// password reset codes.
-//
-// If no mail account is set up, isConfigured() is false and nothing is sent.
+// Sends the two-step and password reset codes through the mail account in the
+// settings. Without one, isConfigured() is false and nothing is sent.
 public class EmailService {
 
     private final String from;

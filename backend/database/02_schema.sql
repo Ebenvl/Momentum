@@ -1,12 +1,6 @@
--- ============================================================
--- LearnTech Momentum: database schema
--- One table for each entity in the data design.
--- Run this logged in as root in MySQL Workbench, after 01_setup.sql.
---
--- Safe to re-run: it drops the tables first, in the right order,
--- so it always gives you a clean, empty database.
--- WARNING: re-running deletes all data in these tables.
--- ============================================================
+-- LearnTech Momentum: every table, one per entity in the data design.
+-- Run as root after 01_setup.sql. WARNING: it drops the tables first,
+-- so re-running deletes all data.
 
 USE momentum;
 
@@ -31,13 +25,8 @@ DROP TABLE IF EXISTS Courses;
 DROP TABLE IF EXISTS Users;
 
 
--- ------------------------------------------------------------
--- Users
--- Everyone who registers in the app, learners and administrators.
--- idst links the account to a learner on the LearnTech platform.
--- NULL idst means registered but not yet matched by email, which is
--- a normal state, not an error.
--- ------------------------------------------------------------
+-- Users: learners and administrators. idst links an account to a LearnTech
+-- learner, NULL means not linked yet (normal, not an error).
 CREATE TABLE Users (
     user_id              INT           NOT NULL AUTO_INCREMENT,
     idst                 INT           NULL,
@@ -59,14 +48,8 @@ CREATE TABLE Users (
 ) ENGINE=InnoDB;
 
 
--- ------------------------------------------------------------
--- Courses
--- The course catalogue, synced from the LearnTech /courses endpoint.
--- Always key on platform_course_id, never on the course code,
--- because codes are not unique on the platform.
--- expected_minutes can be NULL when no duration is set on the
--- platform. It must never be treated as zero.
--- ------------------------------------------------------------
+-- Courses: the catalogue from LearnTech, keyed on platform_course_id (codes
+-- aren't unique). expected_minutes can be NULL, never treat it as zero.
 CREATE TABLE Courses (
     course_id            INT           NOT NULL AUTO_INCREMENT,
     platform_course_id   INT           NOT NULL,
@@ -80,12 +63,7 @@ CREATE TABLE Courses (
 ) ENGINE=InnoDB;
 
 
--- ------------------------------------------------------------
--- Enrolments
--- Which learner is on which course, and the state of it,
--- as of the last sync. state has exactly three values, there is
--- no per-course percentage.
--- ------------------------------------------------------------
+-- Enrolments: who is on which course, and its state, as of the last sync.
 CREATE TABLE Enrolments (
     enrolment_id         INT           NOT NULL AUTO_INCREMENT,
     user_id              INT           NOT NULL,
@@ -105,11 +83,7 @@ CREATE TABLE Enrolments (
 ) ENGINE=InnoDB;
 
 
--- ------------------------------------------------------------
--- Goals
--- Personal goals a learner sets. Free text goals carry no points,
--- because the app cannot check them on its own.
--- ------------------------------------------------------------
+-- Goals: a learner's own goals. Free text goals give no points.
 CREATE TABLE Goals (
     goal_id              INT           NOT NULL AUTO_INCREMENT,
     user_id              INT           NOT NULL,
@@ -131,10 +105,8 @@ CREATE TABLE Goals (
 ) ENGINE=InnoDB;
 
 
--- ------------------------------------------------------------
 -- CheckIns
 -- Progress a learner logs against one of their goals.
--- ------------------------------------------------------------
 CREATE TABLE CheckIns (
     checkin_id           INT           NOT NULL AUTO_INCREMENT,
     goal_id              INT           NOT NULL,
@@ -148,13 +120,8 @@ CREATE TABLE CheckIns (
 ) ENGINE=InnoDB;
 
 
--- ------------------------------------------------------------
--- PointsTransactions
--- Every points award is one row, written during sync, not on display.
--- month_key drives the monthly leaderboard.
--- The unique key stops a repeated sync from awarding the same
--- completion twice.
--- ------------------------------------------------------------
+-- PointsTransactions: one row per award. month_key is for the monthly
+-- leaderboard, and the unique key stops anything being awarded twice.
 CREATE TABLE PointsTransactions (
     transaction_id       INT           NOT NULL AUTO_INCREMENT,
     user_id              INT           NOT NULL,
@@ -170,10 +137,8 @@ CREATE TABLE PointsTransactions (
 ) ENGINE=InnoDB;
 
 
--- ------------------------------------------------------------
 -- Badges
 -- Badge definitions, set up by the administrator.
--- ------------------------------------------------------------
 CREATE TABLE Badges (
     badge_id             INT           NOT NULL AUTO_INCREMENT,
     name                 VARCHAR(100)  NOT NULL,
@@ -189,10 +154,8 @@ CREATE TABLE Badges (
 ) ENGINE=InnoDB;
 
 
--- ------------------------------------------------------------
 -- UserBadges
 -- Which learner has earned which badge. Each badge only once per learner.
--- ------------------------------------------------------------
 CREATE TABLE UserBadges (
     user_badge_id        INT           NOT NULL AUTO_INCREMENT,
     user_id              INT           NOT NULL,
@@ -205,10 +168,8 @@ CREATE TABLE UserBadges (
 ) ENGINE=InnoDB;
 
 
--- ------------------------------------------------------------
 -- Streaks
 -- One row per learner, their current and longest streak.
--- ------------------------------------------------------------
 CREATE TABLE Streaks (
     user_id              INT           NOT NULL,
     current_streak       INT           NOT NULL DEFAULT 0,
@@ -220,12 +181,8 @@ CREATE TABLE Streaks (
 ) ENGINE=InnoDB;
 
 
--- ------------------------------------------------------------
--- ProgressSnapshots
--- Written on every scheduled sync. The platform only holds the
--- current position with no history, so this table is the only place
--- that history will ever exist.
--- ------------------------------------------------------------
+-- ProgressSnapshots: each learner's position at every sync. LearnTech keeps
+-- no history, so this is the only record of progress over time.
 CREATE TABLE ProgressSnapshots (
     snapshot_id          INT           NOT NULL AUTO_INCREMENT,
     user_id              INT           NOT NULL,
@@ -241,12 +198,8 @@ CREATE TABLE ProgressSnapshots (
 ) ENGINE=InnoDB;
 
 
--- ------------------------------------------------------------
--- ActivityLogs
--- System activity and errors, viewable by the administrator.
--- user_id is nullable because some events are not tied to a user,
--- for example the scheduled sync job.
--- ------------------------------------------------------------
+-- ActivityLogs: system activity and errors for the admin. user_id is NULL
+-- for events like the scheduled sync.
 CREATE TABLE ActivityLogs (
     log_id               INT           NOT NULL AUTO_INCREMENT,
     user_id              INT           NULL,
@@ -260,13 +213,8 @@ CREATE TABLE ActivityLogs (
 ) ENGINE=InnoDB;
 
 
--- ------------------------------------------------------------
--- PlatformConfig
--- The LearnTech API details, entered by the administrator in the app.
--- Only ever one row, config_id is always 1.
--- The key and secret are stored encrypted, and only on the server,
--- never on the phone.
--- ------------------------------------------------------------
+-- PlatformConfig: the LearnTech API details from the admin screen, one row,
+-- with the key and secret encrypted.
 CREATE TABLE PlatformConfig (
     config_id            INT           NOT NULL DEFAULT 1,
     platform_url         VARCHAR(500)  NULL,
@@ -280,11 +228,7 @@ CREATE TABLE PlatformConfig (
     CONSTRAINT fk_config_user FOREIGN KEY (updated_by) REFERENCES Users(user_id) ON DELETE SET NULL
 ) ENGINE=InnoDB;
 
--- ------------------------------------------------------------
--- StudySessions
--- A learner's weekly study timetable: which day, what time,
--- which course and what they plan to do.
--- ------------------------------------------------------------
+-- StudySessions: a learner's weekly study timetable.
 CREATE TABLE StudySessions (
     session_id           INT           NOT NULL AUTO_INCREMENT,
     user_id              INT           NOT NULL,
@@ -298,13 +242,8 @@ CREATE TABLE StudySessions (
     CONSTRAINT fk_sessions_user FOREIGN KEY (user_id) REFERENCES Users(user_id) ON DELETE CASCADE
 ) ENGINE=InnoDB;
 
--- ------------------------------------------------------------
--- EmailCodes
--- 6-digit codes sent by email, for two-step login, turning two-step
--- login on, and resetting a password. Only a hash of the code is
--- stored, like a password. Each code lasts 10 minutes, works once,
--- and stops working after 5 wrong tries.
--- ------------------------------------------------------------
+-- EmailCodes: emailed 6-digit codes, stored only as a hash. Each lasts
+-- 10 minutes, works once, and stops after 5 wrong tries.
 CREATE TABLE EmailCodes (
     code_id              INT           NOT NULL AUTO_INCREMENT,
     user_id              INT           NOT NULL,
@@ -319,12 +258,8 @@ CREATE TABLE EmailCodes (
     CONSTRAINT fk_codes_user FOREIGN KEY (user_id) REFERENCES Users(user_id) ON DELETE CASCADE
 ) ENGINE=InnoDB;
 
--- ------------------------------------------------------------
--- ActiveDays
--- The days that counted towards a learner's streak, and why: a
--- check-in, or learning time (at least 35% of a course's expected
--- time spent in it that day, seen by the sync).
--- ------------------------------------------------------------
+-- ActiveDays: days that counted towards the streak, from a check-in or
+-- learning time (35% of a course's expected time that day).
 CREATE TABLE ActiveDays (
     user_id              INT           NOT NULL,
     active_on            DATE          NOT NULL,
@@ -333,11 +268,7 @@ CREATE TABLE ActiveDays (
     CONSTRAINT fk_activedays_user FOREIGN KEY (user_id) REFERENCES Users(user_id) ON DELETE CASCADE
 ) ENGINE=InnoDB;
 
--- ------------------------------------------------------------
--- LearningMinutes
--- Minutes spent in each course on each day, added up by the sync
--- from the change in LearnTech's time spent since the last sync.
--- ------------------------------------------------------------
+-- LearningMinutes: minutes per course per day, worked out by the sync.
 CREATE TABLE LearningMinutes (
     user_id              INT           NOT NULL,
     course_id            INT           NOT NULL,
@@ -348,11 +279,7 @@ CREATE TABLE LearningMinutes (
     CONSTRAINT fk_learning_course FOREIGN KEY (course_id) REFERENCES Courses(course_id) ON DELETE CASCADE
 ) ENGINE=InnoDB;
 
--- ------------------------------------------------------------
--- UserEvents
--- Things a learner did in the app, like opening the timetable,
--- for the easter eggs.
--- ------------------------------------------------------------
+-- UserEvents: things a learner did in the app, for the easter eggs.
 CREATE TABLE UserEvents (
     event_id             INT           NOT NULL AUTO_INCREMENT,
     user_id              INT           NOT NULL,

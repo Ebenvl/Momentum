@@ -1,9 +1,7 @@
--- ============================================================
 -- Adds the streak's learning time, the easter eggs and Bartholomew
 -- to a database that already exists, without deleting anything.
 -- Run this once in MySQL Workbench as root.
 -- (A fresh database: run 02_schema.sql and then this file.)
--- ============================================================
 
 USE momentum;
 
@@ -18,12 +16,8 @@ PREPARE statement FROM @add_hidden;
 EXECUTE statement;
 DEALLOCATE PREPARE statement;
 
--- ------------------------------------------------------------
--- ActiveDays
--- The days that counted towards a learner's streak, and why: a
--- check-in, or learning time (at least 35% of a course's expected
--- time spent in it that day, seen by the sync).
--- ------------------------------------------------------------
+-- ActiveDays: days that counted towards the streak, from a check-in or
+-- learning time (35% of a course's expected time that day).
 CREATE TABLE IF NOT EXISTS ActiveDays (
     user_id              INT           NOT NULL,
     active_on            DATE          NOT NULL,
@@ -32,11 +26,9 @@ CREATE TABLE IF NOT EXISTS ActiveDays (
     CONSTRAINT fk_activedays_user FOREIGN KEY (user_id) REFERENCES Users(user_id) ON DELETE CASCADE
 ) ENGINE=InnoDB;
 
--- ------------------------------------------------------------
 -- LearningMinutes
 -- Minutes spent in each course on each day, added up by the sync
 -- from the change in LearnTech's time spent since the last sync.
--- ------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS LearningMinutes (
     user_id              INT           NOT NULL,
     course_id            INT           NOT NULL,
@@ -47,11 +39,9 @@ CREATE TABLE IF NOT EXISTS LearningMinutes (
     CONSTRAINT fk_learning_course FOREIGN KEY (course_id) REFERENCES Courses(course_id) ON DELETE CASCADE
 ) ENGINE=InnoDB;
 
--- ------------------------------------------------------------
 -- UserEvents
 -- Things a learner did in the app, like opening the timetable,
 -- for the easter eggs.
--- ------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS UserEvents (
     event_id             INT           NOT NULL AUTO_INCREMENT,
     user_id              INT           NOT NULL,
@@ -62,10 +52,8 @@ CREATE TABLE IF NOT EXISTS UserEvents (
     CONSTRAINT fk_events_user FOREIGN KEY (user_id) REFERENCES Users(user_id) ON DELETE CASCADE
 ) ENGINE=InnoDB;
 
--- ------------------------------------------------------------
 -- Easter eggs: secret badges, only shown to a learner once found.
 -- The rule types are checked by EasterEggService in the backend.
--- ------------------------------------------------------------
 INSERT INTO Badges (name, description, rule_type, rule_value, points_awarded, is_active, is_hidden)
 SELECT * FROM (
     SELECT 'Curious Mind' AS name, 'Tapped the Momentum logo seven times. Curiosity pays off.' AS description,
@@ -82,13 +70,8 @@ SELECT * FROM (
 ) AS secrets
 WHERE NOT EXISTS (SELECT 1 FROM Badges WHERE Badges.rule_type = secrets.rule_type);
 
--- ------------------------------------------------------------
--- Bartholomew Crownelius the Third: a legendary learner from long ago.
--- He can't log in (his password hash is of a long random password that
--- was thrown away), and his
--- 333 points are from October 1066, so he only shows on the all-time
--- leaderboard.
--- ------------------------------------------------------------
+-- Bartholomew Crownelius the Third: a legendary learner who can't log in, with
+-- 333 points from October 1066, so he only shows on the all-time leaderboard.
 INSERT IGNORE INTO Users (email, password_hash, full_name, role, status)
 VALUES ('bartholomew.crownelius.the.third@momentum.app',
         '$2a$12$BXnoKwl9Rc0mEHqFuXpij.9c2zZ5d44qszssJsuiuhVZqYesKwgOO',

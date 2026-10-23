@@ -28,10 +28,8 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ThreadLocalRandom;
 
-// Copies data from LearnTech into our own database.
-//
-// The app never waits on LearnTech. The backend syncs on a schedule, and the
-// app only ever reads what is already in our database.
+// Copies data from LearnTech into our database on a schedule, so the app
+// never waits on LearnTech.
 public class SyncService {
 
     private final LearnTechClient learnTechClient;
@@ -109,10 +107,8 @@ public class SyncService {
         return linked;
     }
 
-    // Syncs courses and then every learner, and writes the result to the activity log.
-    // Used at startup and by the schedule in App.java. Never throws, so a failed
-    // sync can't stop the schedule.
-    // synchronized: only one sync can run at a time.
+    // Syncs courses, then every learner, and logs the result. Never throws, so a
+    // failed sync can't stop the schedule, and only one runs at a time.
     public synchronized void syncAll() {
         try {
             int courses = syncCourses();

@@ -36,11 +36,8 @@ import java.util.concurrent.Executors;
 // Talks to the Momentum backend over HTTP and JSON.
 public class RealMomentumApi implements MomentumApi {
 
-    // The hosted backend on Render. The free server sleeps after 15 minutes
-    // without requests, so the first one after that can take up to a minute.
-    // To test against the backend on the laptop instead, use
-    // "http://localhost:7070" and run this once with the phone plugged in:
-    //     adb reverse tcp:7070 tcp:7070
+    // The hosted backend. For the laptop instead: "http://localhost:7070",
+    // with "adb reverse tcp:7070 tcp:7070" run once after plugging in the phone.
     private static final String BASE_URL = "https://momentum-backend-jix0.onrender.com";
 
     // Android does not allow network calls on the screen's thread, so they run
@@ -48,9 +45,7 @@ public class RealMomentumApi implements MomentumApi {
     private final ExecutorService background = Executors.newSingleThreadExecutor();
     private final Handler mainThread = new Handler(Looper.getMainLooper());
 
-    // -----------------------------------------------------
     // Login and register
-    // -----------------------------------------------------
 
     @Override
     public void login(String email, String password, ApiCallback<User> callback) {
@@ -206,9 +201,7 @@ public class RealMomentumApi implements MomentumApi {
         });
     }
 
-    // -----------------------------------------------------
     // Courses
-    // -----------------------------------------------------
 
     @Override
     public void getCatalogue(ApiCallback<List<Course>> callback) {
@@ -248,9 +241,7 @@ public class RealMomentumApi implements MomentumApi {
         });
     }
 
-    // -----------------------------------------------------
     // Goals
-    // -----------------------------------------------------
 
     @Override
     public void getGoals(ApiCallback<List<Goal>> callback) {
@@ -392,9 +383,7 @@ public class RealMomentumApi implements MomentumApi {
         });
     }
 
-    // -----------------------------------------------------
     // Leaderboard
-    // -----------------------------------------------------
 
     @Override
     public void getLeaderboard(boolean allTime, ApiCallback<List<LeaderboardEntry>> callback) {
@@ -414,9 +403,7 @@ public class RealMomentumApi implements MomentumApi {
         });
     }
 
-    // -----------------------------------------------------
     // Study timetable
-    // -----------------------------------------------------
 
     @Override
     public void getStudySessions(ApiCallback<List<StudySession>> callback) {
@@ -463,9 +450,7 @@ public class RealMomentumApi implements MomentumApi {
         });
     }
 
-    // -----------------------------------------------------
     // Admin
-    // -----------------------------------------------------
 
     @Override
     public void getAdminStats(ApiCallback<AdminStats> callback) {
@@ -688,9 +673,7 @@ public class RealMomentumApi implements MomentumApi {
         run(callback, () -> send("GET", "/admin/export/" + table, null));
     }
 
-    // -----------------------------------------------------
     // Helpers
-    // -----------------------------------------------------
 
     // One request, as a piece of code that may fail.
     private interface Request<T> {
@@ -713,11 +696,8 @@ public class RealMomentumApi implements MomentumApi {
         });
     }
 
-    // Sends a request and gives back the reply as text, like request() below.
-    // For the learner's own data (every GET outside /admin), it also keeps a
-    // copy of the reply. If the backend can't be reached, it gives back that
-    // copy instead, so the screens still show the data as it was last synced.
-    // Changes (POST, PUT, DELETE) still need a connection.
+    // Like request(), but keeps a copy of the learner's own data (GETs outside
+    // /admin) and gives that copy back when the backend can't be reached.
     private String send(String method, String path, JSONObject body) throws Exception {
         boolean keepsCopy = "GET".equals(method) && !path.startsWith("/admin");
         String text;

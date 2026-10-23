@@ -38,9 +38,7 @@ public class AuthController {
         this.codeService = codeService;
     }
 
-    // -----------------------------------------------------
     // POST /register
-    // -----------------------------------------------------
     public void register(Context ctx) {
 
         // Read the details the app sent. If it isn't proper JSON, stop here.
@@ -107,9 +105,7 @@ public class AuthController {
         }
     }
 
-    // -----------------------------------------------------
     // POST /login
-    // -----------------------------------------------------
     public void login(Context ctx) {
 
         // Read the details the app sent. If it isn't proper JSON, stop here.
@@ -190,9 +186,7 @@ public class AuthController {
         }
     }
 
-    // -----------------------------------------------------
     // POST /login/verify   the second step: the emailed code
-    // -----------------------------------------------------
     public void verifyLogin(Context ctx) {
 
         CodeRequest request;
@@ -230,11 +224,9 @@ public class AuthController {
         }
     }
 
-    // -----------------------------------------------------
     // POST /password/forgot   emails a reset code
     // Always gives the same answer, whether the email has an account or not,
     // so it can't be used to find out who is registered.
-    // -----------------------------------------------------
     public void forgotPassword(Context ctx) {
 
         CodeRequest request;
@@ -265,9 +257,7 @@ public class AuthController {
         }
     }
 
-    // -----------------------------------------------------
     // POST /password/reset   the code from the email, and the new password
-    // -----------------------------------------------------
     public void resetPassword(Context ctx) {
 
         CodeRequest request;

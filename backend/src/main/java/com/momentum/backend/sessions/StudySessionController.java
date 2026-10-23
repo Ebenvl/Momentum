@@ -25,9 +25,7 @@ public class StudySessionController {
         this.courseRepository = courseRepository;
     }
 
-    // -----------------------------------------------------
     // GET /study-sessions
-    // -----------------------------------------------------
     public void getAll(Context ctx) {
 
         Integer userId = CurrentUser.id(ctx);
@@ -43,9 +41,7 @@ public class StudySessionController {
         }
     }
 
-    // -----------------------------------------------------
     // POST /study-sessions
-    // -----------------------------------------------------
     public void create(Context ctx) {
 
         Integer userId = CurrentUser.id(ctx);
@@ -86,9 +82,7 @@ public class StudySessionController {
         }
     }
 
-    // -----------------------------------------------------
     // PUT /study-sessions/{id}
-    // -----------------------------------------------------
     public void update(Context ctx) {
 
         Integer userId = CurrentUser.id(ctx);
@@ -134,9 +128,7 @@ public class StudySessionController {
         }
     }
 
-    // -----------------------------------------------------
     // DELETE /study-sessions/{id}
-    // -----------------------------------------------------
     public void delete(Context ctx) {
 
         Integer userId = CurrentUser.id(ctx);
@@ -162,9 +154,7 @@ public class StudySessionController {
         }
     }
 
-    // -----------------------------------------------------
     // Helpers
-    // -----------------------------------------------------
 
     // Checks a session the app sent. Gives back what is wrong, or null if it's fine.
     private String checkSession(StudySessionRequest request) {

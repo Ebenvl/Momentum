@@ -79,12 +79,8 @@ public class CourseRepository {
         }
     }
 
-    // Used by the sync: adds the course if it is new, or updates its name if it
-    // is already there. Keyed on platform_course_id, never on the code.
-    //
-    // If LearnTech sends no duration (null), whatever is already saved is kept,
-    // so a duration the admin filled in by hand is not wiped out.
-    // COALESCE means "use the first one that is not null".
+    // Used by the sync: adds the course or updates its name. If LearnTech sends
+    // no duration, COALESCE keeps the saved one, so an admin's value isn't wiped.
     public boolean saveCourse(int platformCourseId, String courseName, Integer expectedMinutes) throws SQLException {
 
         String sql = "INSERT INTO Courses (platform_course_id, course_name, expected_minutes) "

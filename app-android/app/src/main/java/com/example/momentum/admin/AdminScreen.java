@@ -18,11 +18,8 @@ import android.widget.Toast;
 
 import com.example.momentum.data.Session;
 
-// The shared look for the admin screens: a navy header with "Back to Dashboard",
-// a title and subtitle, and a pale scrolling page underneath, the same as the
-// frontend's Course Management screen. Each screen only adds its own content.
-//
-// Also keeps out anyone who isn't an administrator.
+// The shared layout for the admin screens (header, title, scrolling page),
+// which also keeps out anyone who isn't an administrator.
 public abstract class AdminScreen extends BaseActivity {
 
     protected static final int NAVY = Color.rgb(7, 29, 53);
@@ -87,9 +84,7 @@ public abstract class AdminScreen extends BaseActivity {
         load();
     }
 
-    // -----------------------------------------------------
     // Building blocks for the screens
-    // -----------------------------------------------------
 
     protected TextView text(String value, int size, int color, boolean bold) {
         TextView view = new TextView(this);

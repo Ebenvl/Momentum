@@ -22,17 +22,10 @@ import javax.crypto.KeyGenerator;
 import javax.crypto.SecretKey;
 import javax.crypto.spec.GCMParameterSpec;
 
-// Fingerprint or face login.
-//
-// After a normal password login, the learner can turn it on. The app then saves
-// the login token (never the password), encrypted with a key that lives in the
-// phone's secure key storage and only unlocks after a fingerprint or face check.
-// Next time, the fingerprint unlocks the token and they're straight in.
-//
-// The fingerprint itself never leaves the phone, and the app never sees it.
-// If someone adds a new fingerprint to the phone, Android throws the key away,
-// so fingerprint login has to be turned on again with the password.
-// The token lasts 7 days, after that the password is needed once more.
+// Fingerprint or face login. Saves the login token (never the password),
+// encrypted with a key in the phone's secure key storage that only unlocks
+// after a fingerprint or face check. A new fingerprint on the phone, or a
+// token older than 7 days, means the password is needed once more.
 public class BiometricLogin {
 
     // What the learner did with the fingerprint prompt.

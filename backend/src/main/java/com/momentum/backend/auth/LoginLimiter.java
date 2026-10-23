@@ -7,14 +7,9 @@ import java.util.Deque;
 import java.util.HashMap;
 import java.util.Map;
 
-// Stops password guessing: after too many wrong logins in a short time,
-// further tries are refused for a while.
-//
-// Counted per email and per IP address, so it works whether someone tries
-// many passwords on one account, or one password on many accounts.
-// An IP gets more tries than an email, because many people can share one
-// address (everyone on the same Wi-Fi, or behind the hosting service).
-// Kept in memory, so a restart of the backend clears it.
+// Stops password guessing: too many wrong logins in a few minutes, per email
+// and per IP address, and further tries are refused for a while. An IP gets
+// more tries, because many people can share one. Kept in memory only.
 public class LoginLimiter {
 
     public static final int MAX_PER_EMAIL = 5;
