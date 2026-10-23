@@ -17,25 +17,29 @@ Android app (Java)  -->  Momentum backend (Java, Javalin)  -->  MySQL
 - The **Android app** only ever talks to our backend. It never holds the LearnTech API key and never touches the database directly.
 - The **backend** owns everything we add on top of LearnTech: accounts, goals, check-ins, points, badges, streaks and logs, in our own MySQL database.
 - The **LearnTech API** is read only. The backend syncs courses and learner progress from it, at startup, every 30 minutes, and for a learner when they log in. Nothing is ever written back to LearnTech.
+- **Online**, the backend runs on Render (a free web service with HTTPS) and the database on Aiven (free hosted MySQL, with SSL required). The app points there by default, so it works anywhere with internet. On a hosting service the backend reads its passwords and keys from secret environment settings instead of a file.
 
 ## Features
 
 ### Learners
 
 - Register and log in, or log in with a **fingerprint or face** once it's turned on
+- **Stay logged in** between launches, until they log out or the login runs out after 7 days
 - Optional **two-step login**: after the password, a code emailed to them
 - **Forgot password**: a code emailed to them lets them choose a new password
-- See their enrolled courses with their state (not started, in progress, completed) and the points each one earned, plus the rest of the course catalogue
+- See their enrolled courses with their state (not started, in progress, completed) and the points each one earned, plus the rest of the course catalogue, with **search and filters**
 - Open a course on LearnTech inside the app
-- Set goals of different types, edit them, and log check-ins on them
+- Set goals of different types, edit them, log check-ins on them, and **search and filter** them
 - Goals that the app can check, like finishing a course or keeping a streak, **complete themselves** from the learner's data
+- **Offline mode**: without a connection, the app still opens and shows their courses, goals, badges, profile and timetable as they were last synced. Changes need a connection
+- **Reminders** at a time they choose, naming goals due today or tomorrow and warning when their streak is about to break
 - Earn points for completed courses, badges and goals, and earn badges
 - Keep a daily streak: a day counts when they spend at least 35% of a course's expected time learning in it on LearnTech, or log a check-in on a goal
 - Find secret achievements (easter eggs) by exploring the app, each with its own XP
 - A monthly and an all-time leaderboard
-- A profile with all-time points, this month's points and the streak
-- Settings: change name and password, two-step login, fingerprint login, dark mode, and text size
-- Achievements, a certificate for completed courses, a study timetable, reminders, a momentum map and study coaches
+- A profile with all-time points, this month's points, the streak, and a **chart of points over time**
+- Settings: change name and password, two-step login, fingerprint login, reminders, dark mode, and text size
+- Achievements, a certificate for completed courses, a study timetable, a momentum map and study coaches
 
 ### Administrators
 
@@ -44,7 +48,7 @@ Everything a learner can do, plus:
 - A dashboard with live numbers and recent activity
 - User management: create, edit, suspend, reactivate, delete, and link an account to a LearnTech learner
 - Course management: override the points a course is worth, and set an expected duration where LearnTech has none
-- Badge management: create badges with a rule (courses completed, streak days or total points) and the points they give
+- Badge management: create badges with a picture, a rule (courses completed, streak days or total points) and the points they give
 - The LearnTech connection: change the platform address and API key, and test the connection. The key is stored encrypted on the server and only ever shown masked
 - Export any table as a CSV file
 - Engagement analytics and the system activity log
@@ -68,7 +72,9 @@ Each course, badge and goal can only award its points once, so a repeated sync n
 - Learners can only see and change their own goals, check-ins and study sessions. Administrator routes check the role on the server
 - The LearnTech API key stays on the server, encrypted when saved from the app
 - Fingerprint login saves only the login token, encrypted with a key in the phone's secure key storage that only unlocks with a fingerprint or face. The password is never saved
-- The database is backed up automatically once a day
+- Staying logged in also saves only the token, encrypted with a key in the phone's secure key storage. The offline copies are in the app's private storage, one set per account, and logging out wipes both
+- The app only allows plain `http` to the computer it's tested on. The hosted backend uses HTTPS, and the hosted database only accepts SSL connections. The app's database user can read and change data, but can't change or drop tables
+- On a laptop, the backend backs up the database once a day. Online, the database service keeps its own backups
 
 ## What's in this repository
 
@@ -85,7 +91,7 @@ Each course, badge and goal can only award its points once, so a repeated sync n
 | `activities` | The other learner screens: login, sign up, settings, achievements, LearnTech, certificate, reminders, timetable and coaches |
 | `admin` | The administrator screens |
 | `service` | What the screens use, like logging in or saving a goal |
-| `data` | Talks to the backend, keeps the login session, settings and fingerprint login |
+| `data` | Talks to the backend, keeps the login session, the offline copies, settings and fingerprint login |
 | `model` | Simple classes for users, courses, goals, badges and so on |
 
 **Backend** (`backend/src/main/java/com/momentum/backend`):
@@ -100,7 +106,7 @@ Each course, badge and goal can only award its points once, so a repeated sync n
 | `rewards` | Awards badges and completes goals |
 | `learntech` | The LearnTech API client |
 | `backup` | The daily database backup |
-| `config` | Reads `config.properties` and encrypts the saved API key |
+| `config` | Reads `config.properties` (or the hosting service's environment settings) and encrypts the saved API key |
 | `model` | The classes sent to and from the app |
 
 ## Running it
@@ -126,7 +132,7 @@ In MySQL Workbench, logged in as root:
 
 1. In the `backend` folder, copy `config.example.properties` and name the copy `config.properties`.
 2. Fill in the database password from step 1, a long random `jwt.secret`, and the LearnTech API key. `config.properties` is in `.gitignore`, so it never goes to GitHub.
-3. Optional, for two-step login and forgot password: fill in the `mail.` settings. For Gmail, use an app password (Google Account, Security, 2-Step Verification, App passwords), not the account's normal password. Without them, the app says email isn't set up.
+3. Optional, for two-step login and forgot password: fill in the `mail.` settings. For Gmail, use an app password (Google Account, Security, 2-Step Verification, App passwords), not the account's normal password. Without them, the app says email isn't set up. Render's free plan blocks outgoing email, so on the hosted backend these emails don't arrive.
 4. Start it from the `backend` folder:
 
    ```
@@ -140,10 +146,9 @@ If it says "Communications link failure", MySQL isn't running. Start the MySQL80
 ### 3. App
 
 1. Open the `app-android` folder in Android Studio and let Gradle finish.
-2. The app talks to the backend at the address in `data/RealMomentumApi.java` (`BASE_URL`).
-   - **Phone over USB, backend on the same computer:** run `adb reverse tcp:7070 tcp:7070` once after plugging in, so the phone's `localhost` reaches the computer.
-   - **Emulator:** use `http://10.0.2.2:7070`.
-   - **Hosted backend:** put its `https://` address there.
+2. The app talks to the backend at the address in `data/RealMomentumApi.java` (`BASE_URL`). It's set to the hosted backend, so nothing needs changing to use that. The free server sleeps after 15 minutes without use, so the first request after that can take up to a minute.
+   - **Phone over USB, backend on the same computer:** use `http://localhost:7070`, and run `adb reverse tcp:7070 tcp:7070` once after plugging in, so the phone's `localhost` reaches the computer.
+   - **Emulator, backend on the same computer:** use `http://10.0.2.2:7070`.
 3. Run the app.
 
 ### Accounts
@@ -152,7 +157,7 @@ Register in the app. An account is linked to a LearnTech learner automatically w
 
 ## Main backend routes
 
-All routes except register, login, the password reset and `/health` need the login token. Admin routes also need the administrator role.
+All routes except register, login, the password reset and `/health` need the login token. Admin routes, `/health/db` and `/health/learntech` also need the administrator role.
 
 | Route | What it does |
 |---|---|
