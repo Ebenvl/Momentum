@@ -24,8 +24,8 @@
         <item name="materialButtonStyle">@style/Widget.LearningSide.Button</item>
     </style>
 
-    <!-- The same, without the top bar, for Log in and Sign up, which have their
-         own logo and title. -->
+    <!-- The same, without the top bar, for the screens that have their own
+         title, like Log in, Settings, the coaches and the timetable. -->
     <style name="Theme.LearningSide.Page.NoBar">
         <item name="windowActionBar">false</item>
         <item name="windowNoTitle">true</item>

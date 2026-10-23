@@ -276,8 +276,7 @@ public class MainActivity extends BaseActivity {
         if (Session.isLoggedIn() && Session.getUser().id != loadedUserId) {
             loadedUserId = Session.getUser().id;
             userName = Session.getUser().fullName;
-            streakDays = getSharedPreferences("StudyStreakPrefs_" + loadedUserId, MODE_PRIVATE)
-                    .getInt("studyStreak", 0);
+            streakDays = 0;   // the real streak comes from the backend in loadMe
             loadData();
             showStudentTab("Home");
         }

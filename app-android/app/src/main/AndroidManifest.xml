@@ -75,37 +75,37 @@
             android:name=".activities.AchievementsActivity"
             android:exported="false"
             android:label="Achievements"
-            android:theme="@style/Theme.LearningSide.Page" />
+            android:theme="@style/Theme.LearningSide.Page.NoBar" />
         <activity
             android:name=".activities.MomentumMapActivity"
             android:exported="false"
             android:label="Momentum Map"
-            android:theme="@style/Theme.LearningSide.Page" />
+            android:theme="@style/Theme.LearningSide.Page.NoBar" />
         <activity
             android:name=".activities.CertificateActivity"
             android:exported="false"
             android:label="Certificate"
-            android:theme="@style/Theme.LearningSide.Page" />
+            android:theme="@style/Theme.LearningSide.Page.NoBar" />
         <activity
             android:name=".activities.RemindersActivity"
             android:exported="false"
             android:label="Reminders"
-            android:theme="@style/Theme.LearningSide.Page" />
+            android:theme="@style/Theme.LearningSide.Page.NoBar" />
         <activity
             android:name=".activities.StudyCoachActivity"
             android:exported="false"
             android:label="Study Coach"
-            android:theme="@style/Theme.LearningSide.Page" />
+            android:theme="@style/Theme.LearningSide.Page.NoBar" />
         <activity
             android:name=".activities.MomentumCoachActivity"
             android:exported="false"
             android:label="Momentum Coach"
-            android:theme="@style/Theme.LearningSide.Page" />
+            android:theme="@style/Theme.LearningSide.Page.NoBar" />
         <activity
             android:name=".activities.StudyTimetableActivity"
             android:exported="false"
             android:label="Study Timetable"
-            android:theme="@style/Theme.LearningSide.Page" />
+            android:theme="@style/Theme.LearningSide.Page.NoBar" />
 
         <activity
             android:name=".activities.SettingsActivity"

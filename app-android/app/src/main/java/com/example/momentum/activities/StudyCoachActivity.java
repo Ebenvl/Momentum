@@ -113,8 +113,8 @@ public class StudyCoachActivity extends BaseActivity {
                     + "3. Take a 5-minute break.\n"
                     + "4. Practise questions for 15 minutes.\n"
                     + "5. Spend 5 minutes summarising what you learned.\n\n"
-                    + "Choose a time that fits your daily schedule. "
-                    + "What subject are you studying?";
+                    + "Choose a time that fits your daily schedule, and save it "
+                    + "in the Study Timetable on the Goals tab.";
         }
 
         if (text.contains("quiz") || text.contains("test")
@@ -147,8 +147,8 @@ public class StudyCoachActivity extends BaseActivity {
                     + "3. Find a simple real-life example.\n"
                     + "4. Explain it in your own words.\n"
                     + "5. Practise with a question.\n\n"
-                    + "Tell me the exact topic you are studying "
-                    + "and I'll give you a relevant example.";
+                    + "If you can explain it to a friend in a few sentences, "
+                    + "you understand it.";
         }
 
         if (text.contains("motivat") || text.contains("tired")
@@ -164,8 +164,7 @@ public class StudyCoachActivity extends BaseActivity {
             return "Programming tip: practise by writing small programs.\n\n"
                     + "Start with variables, data types, if statements, "
                     + "loops, and methods. Run your code, read any errors, "
-                    + "and fix one problem at a time.\n\n"
-                    + "Which programming concept would you like to practise?";
+                    + "and fix one problem at a time.";
         }
 
         if (text.contains("thank")) {
