@@ -58,8 +58,10 @@ public class LearnTechActivity extends BaseActivity {
         webView.setWebViewClient(new WebViewClient() {
             @Override
             public boolean shouldOverrideUrlLoading(WebView view, WebResourceRequest request) {
+                // Exactly learntech.co.za or one of its sub-addresses, like eduvos.learntech.co.za.
+                // Only checking the end would also let in a look-alike such as fakelearntech.co.za.
                 String host = request.getUrl().getHost();
-                if (host != null && host.endsWith(LEARNTECH_DOMAIN)) {
+                if (host != null && (host.equals(LEARNTECH_DOMAIN) || host.endsWith("." + LEARNTECH_DOMAIN))) {
                     return false;
                 }
                 try {

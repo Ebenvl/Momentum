@@ -145,7 +145,13 @@ public class App {
 
             // Can the backend reach the database?
             // If this fails, first check MySQL is running: Get-Service MySQL80
+            // Admins only, now that the backend is online: anyone else could keep
+            // making it open database connections.
             javalinConfig.routes.get("/health/db", ctx -> {
+                if (!CurrentUser.isAdmin(ctx)) {
+                    ctx.status(403).json(Map.of("error", "administrators only"));
+                    return;
+                }
                 if (database.isReachable()) {
                     ctx.json(Map.of("database", "ok"));
                 } else {
