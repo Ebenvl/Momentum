@@ -136,6 +136,16 @@ public class App {
             // Is the backend itself running?
             javalinConfig.routes.get("/health", ctx -> ctx.json(Map.of("status", "ok")));
 
+            // For UptimeRobot: also checks the database, so a database that's off
+            // shows as down, and the database gets used every few minutes.
+            javalinConfig.routes.get("/health/full", ctx -> {
+                if (database.isReachable()) {
+                    ctx.json(Map.of("status", "ok"));
+                } else {
+                    ctx.status(503).json(Map.of("status", "database unreachable"));
+                }
+            });
+
             // Can the backend reach the database? Admins only, so nobody else can
             // keep making it open connections.
             javalinConfig.routes.get("/health/db", ctx -> {
